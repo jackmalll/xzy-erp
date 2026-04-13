@@ -1,0 +1,2 @@
+cn.xzy.framework.tracer.config.XzyTracerAutoConfiguration
+cn.xzy.framework.tracer.config.XzyMetricsAutoConfiguration

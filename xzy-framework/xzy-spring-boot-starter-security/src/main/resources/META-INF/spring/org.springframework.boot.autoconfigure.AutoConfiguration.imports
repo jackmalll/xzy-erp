@@ -1,0 +1,3 @@
+cn.xzy.framework.security.config.XzySecurityAutoConfiguration
+cn.xzy.framework.security.config.XzyWebSecurityConfigurerAdapter
+cn.xzy.framework.operatelog.config.XzyOperateLogConfiguration

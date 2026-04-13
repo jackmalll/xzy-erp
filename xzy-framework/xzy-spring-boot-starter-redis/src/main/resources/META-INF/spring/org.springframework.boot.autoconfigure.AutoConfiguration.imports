@@ -1,0 +1,2 @@
+cn.xzy.framework.redis.config.XzyRedisAutoConfiguration
+cn.xzy.framework.redis.config.XzyCacheAutoConfiguration

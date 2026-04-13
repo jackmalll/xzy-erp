@@ -1,0 +1,7 @@
+cn.xzy.framework.apilog.config.XzyApiLogAutoConfiguration
+cn.xzy.framework.jackson.config.XzyJacksonAutoConfiguration
+cn.xzy.framework.swagger.config.XzySwaggerAutoConfiguration
+cn.xzy.framework.web.config.XzyWebAutoConfiguration
+cn.xzy.framework.xss.config.XzyXssAutoConfiguration
+cn.xzy.framework.banner.config.XzyBannerAutoConfiguration
+cn.xzy.framework.encrypt.config.XzyApiEncryptAutoConfiguration

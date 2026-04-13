@@ -1,0 +1,2 @@
+cn.xzy.framework.quartz.config.XzyQuartzAutoConfiguration
+cn.xzy.framework.quartz.config.XzyAsyncAutoConfiguration

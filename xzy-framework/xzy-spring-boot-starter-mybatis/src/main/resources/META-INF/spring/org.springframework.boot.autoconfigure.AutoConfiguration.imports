@@ -1,0 +1,3 @@
+cn.xzy.framework.datasource.config.XzyDataSourceAutoConfiguration
+cn.xzy.framework.mybatis.config.XzyMybatisAutoConfiguration
+cn.xzy.framework.translate.config.XzyTranslateAutoConfiguration
