@@ -40,11 +40,11 @@
 <!--        </dependency>-->
 
         <!-- 数据报表。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.xzy</groupId>-->
-<!--            <artifactId>xzy-module-report</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>cn.xzy</groupId>
+            <artifactId>xzy-module-report</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <!-- 工作流。默认注释，保证编译速度 -->
 <!--        <dependency>-->
 <!--            <groupId>cn.xzy</groupId>-->
@@ -95,11 +95,11 @@
 <!--        </dependency>-->
 
         <!-- ERP 相关模块。默认注释，保证编译速度 -->
-<!--        <dependency>-->
-<!--            <groupId>cn.xzy</groupId>-->
-<!--            <artifactId>xzy-module-erp</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>cn.xzy</groupId>
+            <artifactId>xzy-module-erp</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
         <!-- AI 大模型相关模块。默认注释，保证编译速度 -->
 <!--        <dependency>-->
