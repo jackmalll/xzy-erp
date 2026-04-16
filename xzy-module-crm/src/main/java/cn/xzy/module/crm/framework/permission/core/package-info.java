@@ -1,1 +1,0 @@
-package cn.xzy.module.crm.framework.permission.core;

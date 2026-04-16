@@ -1,1 +1,0 @@
-package cn.xzy.module.crm.dal.mysql.permission;
