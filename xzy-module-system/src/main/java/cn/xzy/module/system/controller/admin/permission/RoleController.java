@@ -7,10 +7,12 @@ import cn.xzy.framework.common.pojo.PageParam;
 import cn.xzy.framework.common.pojo.PageResult;
 import cn.xzy.framework.common.util.object.BeanUtils;
 import cn.xzy.framework.excel.core.util.ExcelUtils;
+import cn.xzy.framework.security.core.util.SecurityFrameworkUtils;
 import cn.xzy.module.system.controller.admin.permission.vo.role.RolePageReqVO;
 import cn.xzy.module.system.controller.admin.permission.vo.role.RoleRespVO;
 import cn.xzy.module.system.controller.admin.permission.vo.role.RoleSaveReqVO;
 import cn.xzy.module.system.dal.dataobject.permission.RoleDO;
+import cn.xzy.module.system.service.permission.PermissionService;
 import cn.xzy.module.system.service.permission.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static cn.xzy.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
 import static cn.xzy.framework.common.pojo.CommonResult.success;
@@ -38,6 +42,8 @@ public class RoleController {
 
     @Resource
     private RoleService roleService;
+    @Resource
+    private PermissionService permissionService;
 
     @PostMapping("/create")
     @Operation(summary = "创建角色")
@@ -84,6 +90,11 @@ public class RoleController {
     @Operation(summary = "获得角色分页")
     @PreAuthorize("@ss.hasPermission('system:role:query')")
     public CommonResult<PageResult<RoleRespVO>> getRolePage(RolePageReqVO pageReqVO) {
+        Long operatorUserId = SecurityFrameworkUtils.getLoginUserId();
+        Set<Long> operatorRoleIds = permissionService.getUserRoleIdListByUserId(operatorUserId);
+        if (!roleService.hasAnySuperAdmin(operatorRoleIds)) {
+            pageReqVO.setIds(permissionService.getAssignableRoleIdsByOperator(operatorUserId));
+        }
         PageResult<RoleDO> pageResult = roleService.getRolePage(pageReqVO);
         return success(BeanUtils.toBean(pageResult, RoleRespVO.class));
     }
@@ -91,7 +102,17 @@ public class RoleController {
     @GetMapping({"/list-all-simple", "/simple-list"})
     @Operation(summary = "获取角色精简信息列表", description = "只包含被开启的角色，主要用于前端的下拉选项")
     public CommonResult<List<RoleRespVO>> getSimpleRoleList() {
-        List<RoleDO> list = roleService.getRoleListByStatus(singleton(CommonStatusEnum.ENABLE.getStatus()));
+        Long operatorUserId = SecurityFrameworkUtils.getLoginUserId();
+        Set<Long> operatorRoleIds = permissionService.getUserRoleIdListByUserId(operatorUserId);
+        List<RoleDO> list;
+        if (roleService.hasAnySuperAdmin(operatorRoleIds)) {
+            list = roleService.getRoleListByStatus(singleton(CommonStatusEnum.ENABLE.getStatus()));
+        } else {
+            Set<Long> visibleIds = permissionService.getAssignableRoleIdsByOperator(operatorUserId);
+            list = roleService.getRoleList(visibleIds).stream()
+                    .filter(role -> CommonStatusEnum.ENABLE.getStatus().equals(role.getStatus()))
+                    .collect(Collectors.toList());
+        }
         list.sort(Comparator.comparing(RoleDO::getSort));
         return success(BeanUtils.toBean(list, RoleRespVO.class));
     }

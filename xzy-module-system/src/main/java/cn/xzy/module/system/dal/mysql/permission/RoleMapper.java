@@ -21,6 +21,7 @@ public interface RoleMapper extends BaseMapperX<RoleDO> {
                 .likeIfPresent(RoleDO::getCode, reqVO.getCode())
                 .eqIfPresent(RoleDO::getStatus, reqVO.getStatus())
                 .betweenIfPresent(BaseDO::getCreateTime, reqVO.getCreateTime())
+                .inIfPresent(RoleDO::getId, reqVO.getIds())
                 .orderByAsc(RoleDO::getSort));
     }
 

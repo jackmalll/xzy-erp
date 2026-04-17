@@ -40,3 +40,13 @@ export const getUserRoleList = async (userId: number) => {
 export const assignUserRole = async (data: PermissionAssignUserRoleReqVO) => {
   return await request.post({ url: '/system/permission/assign-user-role', data })
 }
+
+// 获取当前操作者可分配给角色的菜单ID集合（非超管时受限于自身权限）
+export const getAssignableMenuIds = async (): Promise<number[]> => {
+  return await request.get({ url: '/system/permission/list-assignable-menus' })
+}
+
+// 获取当前操作者可分配给用户的角色列表（非超管时受限于自身拥有的角色）
+export const getAssignableRoles = async (): Promise<number[]> => {
+  return await request.get({ url: '/system/permission/list-assignable-roles' })
+}

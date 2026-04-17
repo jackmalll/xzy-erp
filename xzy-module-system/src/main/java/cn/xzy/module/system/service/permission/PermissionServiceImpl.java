@@ -12,6 +12,7 @@ import cn.xzy.module.system.dal.dataobject.permission.MenuDO;
 import cn.xzy.module.system.dal.dataobject.permission.RoleDO;
 import cn.xzy.module.system.dal.dataobject.permission.RoleMenuDO;
 import cn.xzy.module.system.dal.dataobject.permission.UserRoleDO;
+import cn.xzy.module.system.dal.dataobject.user.AdminUserDO;
 import cn.xzy.module.system.dal.mysql.permission.RoleMenuMapper;
 import cn.xzy.module.system.dal.mysql.permission.UserRoleMapper;
 import cn.xzy.module.system.dal.redis.RedisKeyConstants;
@@ -33,8 +34,12 @@ import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.function.Supplier;
 
+import static cn.xzy.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.xzy.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.xzy.framework.common.util.json.JsonUtils.toJsonString;
+import static cn.xzy.module.system.enums.ErrorCodeConstants.PERMISSION_ROLE_MENU_EXCEED_OPERATOR;
+import static cn.xzy.module.system.enums.ErrorCodeConstants.PERMISSION_USER_ROLE_EXCEED_OPERATOR;
+import static cn.xzy.module.system.enums.ErrorCodeConstants.PERMISSION_USER_NOT_IN_OPERATOR_DEPT;
 
 /**
  * 权限 Service 实现类
@@ -131,6 +136,49 @@ public class PermissionServiceImpl implements PermissionService {
     // ========== 角色-菜单的相关方法  ==========
 
     @Override
+    public void assignRoleMenu(Long operatorUserId, Long roleId, Set<Long> menuIds) {
+        // 非超级管理员，校验分配的菜单必须是操作者自身菜单的子集
+        Set<Long> operatorRoleIds = getUserRoleIdListByUserId(operatorUserId);
+        if (!roleService.hasAnySuperAdmin(operatorRoleIds)) {
+            Set<Long> operatorMenuIds = getRoleMenuListByRoleId(operatorRoleIds);
+            Collection<Long> exceededMenuIds = CollUtil.subtract(CollUtil.emptyIfNull(menuIds), operatorMenuIds);
+            if (CollUtil.isNotEmpty(exceededMenuIds)) {
+                throw exception(PERMISSION_ROLE_MENU_EXCEED_OPERATOR);
+            }
+        }
+        assignRoleMenu(roleId, menuIds);
+    }
+
+    @Override
+    public Set<Long> getAssignableMenuIdsByOperator(Long operatorUserId) {
+        Set<Long> operatorRoleIds = getUserRoleIdListByUserId(operatorUserId);
+        // 超管返回全量菜单
+        if (roleService.hasAnySuperAdmin(operatorRoleIds)) {
+            return convertSet(menuService.getMenuList(), MenuDO::getId);
+        }
+        return getRoleMenuListByRoleId(operatorRoleIds);
+    }
+
+    @Override
+    public Set<Long> getOperatorDeptScope(Long operatorUserId) {
+        Set<Long> operatorRoleIds = getUserRoleIdListByUserId(operatorUserId);
+        // 超管不限制部门范围
+        if (roleService.hasAnySuperAdmin(operatorRoleIds)) {
+            return null;
+        }
+        // 获取操作者自身所属部门
+        AdminUserDO operatorUser = userService.getUser(operatorUserId);
+        if (operatorUser == null || operatorUser.getDeptId() == null) {
+            return Collections.emptySet();
+        }
+        Long operatorDeptId = operatorUser.getDeptId();
+        // 本部门 + 所有子部门
+        Set<Long> deptScope = new HashSet<>(deptService.getChildDeptIdListFromCache(operatorDeptId));
+        deptScope.add(operatorDeptId);
+        return deptScope;
+    }
+
+    @Override
     @DSTransactional // 多数据源，使用 @DSTransactional 保证本地事务，以及数据源的切换
     @Caching(evict = {
             @CacheEvict(value = RedisKeyConstants.MENU_ROLE_ID_LIST,
@@ -201,6 +249,29 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     // ========== 用户-角色的相关方法  ==========
+
+    @Override
+    public void assignUserRole(Long operatorUserId, Long userId, Set<Long> roleIds) {
+        Set<Long> operatorRoleIds = getUserRoleIdListByUserId(operatorUserId);
+        if (!roleService.hasAnySuperAdmin(operatorRoleIds)) {
+            // 1. 目标用户必须在操作者的部门管辖范围内（本部门及子部门）
+            Set<Long> deptScope = getOperatorDeptScope(operatorUserId);
+            if (CollUtil.isEmpty(deptScope)) { // 空集表示操作者自身无部门，不允许操作
+                throw exception(PERMISSION_USER_NOT_IN_OPERATOR_DEPT);
+            }
+            AdminUserDO targetUser = userService.getUser(userId);
+            if (targetUser == null || !deptScope.contains(targetUser.getDeptId())) {
+                throw exception(PERMISSION_USER_NOT_IN_OPERATOR_DEPT);
+            }
+            // 2. 分配的角色不能超出部门范围内已有的角色集合（排除超管角色）
+            Set<Long> deptScopeRoleIds = getDeptScopeRoleIds(deptScope);
+            Collection<Long> exceededRoleIds = CollUtil.subtract(CollUtil.emptyIfNull(roleIds), deptScopeRoleIds);
+            if (CollUtil.isNotEmpty(exceededRoleIds)) {
+                throw exception(PERMISSION_USER_ROLE_EXCEED_OPERATOR);
+            }
+        }
+        assignUserRole(userId, roleIds);
+    }
 
     @Override
     @DSTransactional // 多数据源，使用 @DSTransactional 保证本地事务，以及数据源的切换
@@ -327,6 +398,40 @@ public class PermissionServiceImpl implements PermissionService {
             log.error("[getDeptDataPermission][LoginUser({}) role({}) 无法处理]", userId, toJsonString(result));
         }
         return result;
+    }
+
+    @Override
+    public Set<Long> getAssignableRoleIdsByOperator(Long operatorUserId) {
+        Set<Long> operatorRoleIds = getUserRoleIdListByUserId(operatorUserId);
+        // 超管：返回全量角色（含超管角色）
+        if (roleService.hasAnySuperAdmin(operatorRoleIds)) {
+            return convertSet(roleService.getRoleList(), RoleDO::getId);
+        }
+        // 非超管：可分配的角色 = 本部门+子部门所有用户持有的角色集合（排除超管角色）
+        Set<Long> deptScope = getOperatorDeptScope(operatorUserId);
+        if (CollUtil.isEmpty(deptScope)) {
+            return Collections.emptySet();
+        }
+        return getDeptScopeRoleIds(deptScope);
+    }
+
+    /**
+     * 获得指定部门范围内所有用户持有的角色编号集合（排除超管角色）
+     *
+     * @param deptScope 部门编号集合
+     * @return 角色编号集合
+     */
+    private Set<Long> getDeptScopeRoleIds(Set<Long> deptScope) {
+        List<AdminUserDO> deptUsers = userService.getUserListByDeptIds(deptScope);
+        if (CollUtil.isEmpty(deptUsers)) {
+            return Collections.emptySet();
+        }
+        Set<Long> roleIds = new HashSet<>();
+        for (AdminUserDO user : deptUsers) {
+            roleIds.addAll(getUserRoleIdListByUserId(user.getId()));
+        }
+        roleIds.removeIf(roleId -> roleService.hasAnySuperAdmin(Collections.singleton(roleId)));
+        return roleIds;
     }
 
     /**

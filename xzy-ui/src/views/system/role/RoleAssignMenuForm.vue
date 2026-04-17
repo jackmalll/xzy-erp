@@ -49,6 +49,7 @@ import { defaultProps, handleTree } from '@/utils/tree'
 import * as RoleApi from '@/api/system/role'
 import * as MenuApi from '@/api/system/menu'
 import * as PermissionApi from '@/api/system/permission'
+import type { MenuVO } from '@/api/system/menu'
 
 defineOptions({ name: 'SystemRoleAssignMenuForm' })
 
@@ -65,16 +66,35 @@ const formData = reactive({
 })
 const formRef = ref() // 表单 Ref
 const menuOptions = ref<any[]>([]) // 菜单树形结构
+const assignableMenuIds = ref<Set<number>>(new Set()) // 操作者可分配的菜单ID集合
 const menuExpand = ref(false) // 展开/折叠
 const treeRef = ref() // 菜单树组件 Ref
 const treeNodeAll = ref(false) // 全选/全不选
+
+/** 过滤菜单树，只保留操作者可分配的菜单及其父节点 */
+const filterMenusByAssignable = (menus: any[], ids: Set<number>): any[] => {
+  return menus
+    .map((menu: any) => {
+      const children = menu.children ? filterMenusByAssignable(menu.children, ids) : []
+      const selfVisible = ids.has(menu.id)
+      if (selfVisible || children.length > 0) {
+        return { ...menu, children }
+      }
+      return null
+    })
+    .filter(Boolean)
+}
 
 /** 打开弹窗 */
 const open = async (row: RoleApi.RoleVO) => {
   dialogVisible.value = true
   resetForm()
-  // 加载 Menu 列表。注意，必须放在前面，不然下面 setChecked 没数据节点
-  menuOptions.value = handleTree(await MenuApi.getSimpleMenusList())
+  // 加载操作者可分配菜单ID集合（非超管时为自身菜单子集）
+  const assignableIds: number[] = await PermissionApi.getAssignableMenuIds()
+  assignableMenuIds.value = new Set(assignableIds)
+  // 加载 Menu 列表并将菜单树过滤至可分配范围。注意，必须放在前面，不然下面 setChecked 没数据节点
+  const allMenus: MenuVO[] = await MenuApi.getSimpleMenusList()
+  menuOptions.value = handleTree(filterMenusByAssignable(allMenus, assignableMenuIds.value))
   // 设置数据
   formData.id = row.id
   formData.name = row.name

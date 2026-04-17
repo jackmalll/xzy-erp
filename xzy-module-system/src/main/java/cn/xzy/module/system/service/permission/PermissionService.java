@@ -36,12 +36,39 @@ public interface PermissionService {
     // ========== 角色-菜单的相关方法  ==========
 
     /**
-     * 设置角色菜单
+     * 设置角色菜单（带操作者越权校验）
+     * 非超级管理员只能给角色分配自己拥有的菜单权限子集
+     *
+     * @param operatorUserId 操作者用户编号
+     * @param roleId         角色编号
+     * @param menuIds        菜单编号集合
+     */
+    void assignRoleMenu(Long operatorUserId, Long roleId, Set<Long> menuIds);
+
+    /**
+     * 设置角色菜单（无越权校验，内部/超管专用）
      *
      * @param roleId  角色编号
      * @param menuIds 菜单编号集合
      */
     void assignRoleMenu(Long roleId, Set<Long> menuIds);
+
+    /**
+     * 获得操作者可以分配给角色的菜单编号集合（即操作者自身拥有的菜单，超管返回全量）
+     *
+     * @param operatorUserId 操作者用户编号
+     * @return 可分配菜单编号集合
+     */
+    Set<Long> getAssignableMenuIdsByOperator(Long operatorUserId);
+
+    /**
+     * 获得操作者的部门管辖范围（本部门 + 所有子部门的 ID 集合）
+     * 超级管理员返回 null，表示不做部门限制
+     *
+     * @param operatorUserId 操作者用户编号
+     * @return 部门编号集合，null 表示无限制
+     */
+    Set<Long> getOperatorDeptScope(Long operatorUserId);
 
     /**
      * 处理角色删除时，删除关联授权数据
@@ -86,9 +113,19 @@ public interface PermissionService {
     // ========== 用户-角色的相关方法  ==========
 
     /**
-     * 设置用户角色
+     * 设置用户角色（带操作者越权校验）
+     * 非超级管理员只能给用户分配自己拥有的角色子集
      *
-     * @param userId  角色编号
+     * @param operatorUserId 操作者用户编号
+     * @param userId         被操作用户编号
+     * @param roleIds        角色编号集合
+     */
+    void assignUserRole(Long operatorUserId, Long userId, Set<Long> roleIds);
+
+    /**
+     * 设置用户角色（无越权校验，内部/超管专用）
+     *
+     * @param userId  用户编号
      * @param roleIds 角色编号集合
      */
     void assignUserRole(Long userId, Set<Long> roleIds);
@@ -142,5 +179,15 @@ public interface PermissionService {
      * @return 部门数据权限
      */
     DeptDataPermissionRespDTO getDeptDataPermission(Long userId);
+
+    /**
+     * 获得操作者可分配给用户的角色编号集合
+     * 超管：返回全量角色（含超管角色）
+     * 非超管：返回本部门+子部门所有用户持有的角色集合（排除超管角色），与 assignUserRole 越权校验标准一致
+     *
+     * @param operatorUserId 操作者用户编号
+     * @return 可分配角色编号集合
+     */
+    Set<Long> getAssignableRoleIdsByOperator(Long operatorUserId);
 
 }

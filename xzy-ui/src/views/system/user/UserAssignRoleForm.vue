@@ -52,11 +52,20 @@ const open = async (row: UserApi.UserVO) => {
   formLoading.value = true
   try {
     formData.value.roleIds = await PermissionApi.getUserRoleList(row.id)
+    // 后端已过滤，返回的角色ID已局限在操作者可分配范围内
   } finally {
     formLoading.value = false
   }
-  // 获得角色列表
-  roleList.value = await RoleApi.getSimpleRoleList()
+  // 获得角色列表，非超管只展示自身拥有的角色选项
+  const allRoles = await RoleApi.getSimpleRoleList()
+  const assignableRoleIds: number[] | null = await PermissionApi.getAssignableRoles()
+  if (assignableRoleIds === null) {
+    // null 代表超管，展示全量
+    roleList.value = allRoles
+  } else {
+    const idSet = new Set(assignableRoleIds)
+    roleList.value = allRoles.filter((r) => idSet.has(r.id))
+  }
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 

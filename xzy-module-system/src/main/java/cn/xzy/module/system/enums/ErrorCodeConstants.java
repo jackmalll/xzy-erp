@@ -168,4 +168,9 @@ public interface ErrorCodeConstants {
     // ========== 站内信发送 1-002-028-000 ==========
     ErrorCode NOTIFY_SEND_TEMPLATE_PARAM_MISS = new ErrorCode(1_002_028_000, "模板参数({})缺失");
 
+    // ========== 权限越权保护 1-002-029-000 ==========
+    ErrorCode PERMISSION_ROLE_MENU_EXCEED_OPERATOR = new ErrorCode(1_002_029_000, "分配的菜单权限超出了当前操作者自身拥有的权限范围，禁止越权分配");
+    ErrorCode PERMISSION_USER_ROLE_EXCEED_OPERATOR  = new ErrorCode(1_002_029_001, "分配的角色超出了当前操作者自身拥有的角色范围，禁止越权分配");
+    ErrorCode PERMISSION_USER_NOT_IN_OPERATOR_DEPT  = new ErrorCode(1_002_029_002, "目标用户不在当前操作者的部门管辖范围内，无权操作");
+
 }
