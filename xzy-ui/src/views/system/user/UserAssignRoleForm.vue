@@ -56,16 +56,8 @@ const open = async (row: UserApi.UserVO) => {
   } finally {
     formLoading.value = false
   }
-  // 获得角色列表，非超管只展示自身拥有的角色选项
-  const allRoles = await RoleApi.getSimpleRoleList()
-  const assignableRoleIds: number[] | null = await PermissionApi.getAssignableRoles()
-  if (assignableRoleIds === null) {
-    // null 代表超管，展示全量
-    roleList.value = allRoles
-  } else {
-    const idSet = new Set(assignableRoleIds)
-    roleList.value = allRoles.filter((r) => idSet.has(r.id))
-  }
+  // 获得角色列表（后端已按操作者权限过滤）
+  roleList.value = await RoleApi.getSimpleRoleList()
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 

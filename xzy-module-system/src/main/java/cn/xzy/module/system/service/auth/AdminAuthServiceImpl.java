@@ -21,6 +21,7 @@ import cn.xzy.module.system.enums.logger.LoginLogTypeEnum;
 import cn.xzy.module.system.enums.logger.LoginResultEnum;
 import cn.xzy.module.system.enums.oauth2.OAuth2ClientConstants;
 import cn.xzy.module.system.enums.sms.SmsSceneEnum;
+import cn.xzy.module.system.framework.dingtalk.core.DingTalkClient;
 import cn.xzy.module.system.service.logger.LoginLogService;
 import cn.xzy.module.system.service.member.MemberService;
 import cn.xzy.module.system.service.oauth2.OAuth2TokenService;
@@ -69,6 +70,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private CaptchaService captchaService;
     @Resource
     private SmsCodeApi smsCodeApi;
+    @Resource
+    private DingTalkClient dingTalkClient;
 
     /**
      * 验证码的开关，默认为 true
@@ -302,5 +305,26 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         );
 
         userService.updateUserPassword(userByMobile.getId(), reqVO.getPassword());
+    }
+
+    @Override
+    public AuthLoginRespVO dingTalkLogin(AuthDingTalkLoginReqVO reqVO) {
+        // 1. 通过钉钉免登授权码获取用户手机号
+        String mobile = dingTalkClient.getUserMobileByAuthCode(reqVO.getAuthCode());
+
+        // 2. 根据手机号查询用户
+        AdminUserDO user = userService.getUserByMobile(mobile);
+        if (user == null) {
+            throw exception(AUTH_DINGTALK_MOBILE_NOT_MATCH);
+        }
+
+        // 3. 校验用户是否被禁用
+        if (CommonStatusEnum.isDisable(user.getStatus())) {
+            createLoginLog(user.getId(), mobile, LoginLogTypeEnum.LOGIN_DINGTALK, LoginResultEnum.USER_DISABLED);
+            throw exception(AUTH_LOGIN_USER_DISABLED);
+        }
+
+        // 4. 创建 Token 令牌，记录登录日志
+        return createTokenAfterLoginSuccess(user.getId(), mobile, LoginLogTypeEnum.LOGIN_DINGTALK);
     }
 }

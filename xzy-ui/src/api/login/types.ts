@@ -36,3 +36,7 @@ export type RegisterVO = {
   password: string
   captchaVerification: string
 }
+
+export type DingTalkLoginVO = {
+  authCode: string
+}

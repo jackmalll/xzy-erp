@@ -1,10 +1,11 @@
 import router from './router'
 import type { RouteRecordRaw } from 'vue-router'
 import { isRelogin } from '@/config/axios/service'
-import { getAccessToken } from '@/utils/auth'
+import { getAccessToken, removeToken } from '@/utils/auth'
 import { useTitle } from '@/hooks/web/useTitle'
 import { useNProgress } from '@/hooks/web/useNProgress'
 import { usePageLoading } from '@/hooks/web/usePageLoading'
+import { deleteUserCache } from '@/hooks/web/useCache'
 import { useDictStoreWithOut } from '@/store/modules/dict'
 import { useUserStoreWithOut } from '@/store/modules/user'
 import { usePermissionStoreWithOut } from '@/store/modules/permission'
@@ -49,6 +50,7 @@ const parseURL = (
 // 路由不重定向白名单
 const whiteList = [
   '/login',
+  '/dingtalk-login',
   '/social-login',
   '/auth-redirect',
   '/bind',
@@ -60,6 +62,14 @@ const whiteList = [
 router.beforeEach(async (to, from, next) => {
   start()
   loadStart()
+  if (to.path === '/dingtalk-login') {
+    const userStore = useUserStoreWithOut()
+    removeToken()
+    deleteUserCache()
+    userStore.resetState()
+    next()
+    return
+  }
   if (getAccessToken()) {
     if (to.path === '/login') {
       next({ path: '/' })

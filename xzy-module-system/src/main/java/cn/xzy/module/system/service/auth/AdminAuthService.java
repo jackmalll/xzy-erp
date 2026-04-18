@@ -85,4 +85,12 @@ public interface AdminAuthService {
      */
     void resetPassword(AuthResetPasswordReqVO reqVO);
 
+    /**
+     * 钉钉免密登录
+     *
+     * @param reqVO 钉钉授权码
+     * @return 登录结果
+     */
+    AuthLoginRespVO dingTalkLogin(@Valid AuthDingTalkLoginReqVO reqVO);
+
 }

@@ -173,4 +173,13 @@ public class AuthController {
         return success(authService.socialLogin(reqVO));
     }
 
+    // ========== 钉钉免密登录相关 ==========
+
+    @PostMapping("/dingtalk-login")
+    @PermitAll
+    @Operation(summary = "钉钉免密登录", description = "使用钉钉企业内应用免登授权码登录")
+    public CommonResult<AuthLoginRespVO> dingTalkLogin(@RequestBody @Valid AuthDingTalkLoginReqVO reqVO) {
+        return success(authService.dingTalkLogin(reqVO));
+    }
+
 }

@@ -133,7 +133,7 @@
           }
         }
       </style>
-      <div class="app-loading">
+      <div class="app-loading" id="app-loading-placeholder">
         <div class="app-loading-wrap">
           <div class="app-loading-title">
             <img src="/logo.gif" class="app-loading-logo" alt="Logo" />
@@ -145,6 +145,14 @@
           </div>
         </div>
       </div>
+      <script>
+        // 钉钉登录路径下隐藏默认加载动画，避免出现 logo 闪屏
+        if (window.location.pathname === '/dingtalk-login') {
+          var el = document.getElementById('app-loading-placeholder')
+          if (el) { el.style.display = 'none' }
+          document.body.style.background = '#ffffff'
+        }
+      </script>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

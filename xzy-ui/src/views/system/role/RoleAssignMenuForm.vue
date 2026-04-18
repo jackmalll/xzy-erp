@@ -58,7 +58,12 @@ const message = useMessage() // 消息弹窗
 
 const dialogVisible = ref(false) // 弹窗的是否展示
 const formLoading = ref(false) // 表单的加载中：1）修改时的数据加载；2）提交的按钮禁用
-const formData = reactive({
+const formData = reactive<{
+  id: number | undefined
+  name: string
+  code: string
+  menuIds: number[]
+}>({
   id: undefined,
   name: '',
   code: '',
@@ -66,7 +71,6 @@ const formData = reactive({
 })
 const formRef = ref() // 表单 Ref
 const menuOptions = ref<any[]>([]) // 菜单树形结构
-const assignableMenuIds = ref<Set<number>>(new Set()) // 操作者可分配的菜单ID集合
 const menuExpand = ref(false) // 展开/折叠
 const treeRef = ref() // 菜单树组件 Ref
 const treeNodeAll = ref(false) // 全选/全不选
@@ -91,19 +95,19 @@ const open = async (row: RoleApi.RoleVO) => {
   resetForm()
   // 加载操作者可分配菜单ID集合（非超管时为自身菜单子集）
   const assignableIds: number[] = await PermissionApi.getAssignableMenuIds()
-  assignableMenuIds.value = new Set(assignableIds)
+  const assignableMenuIds = new Set(assignableIds)
   // 加载 Menu 列表并将菜单树过滤至可分配范围。注意，必须放在前面，不然下面 setChecked 没数据节点
   const allMenus: MenuVO[] = await MenuApi.getSimpleMenusList()
-  menuOptions.value = handleTree(filterMenusByAssignable(allMenus, assignableMenuIds.value))
+  menuOptions.value = handleTree(filterMenusByAssignable(allMenus, assignableMenuIds))
   // 设置数据
   formData.id = row.id
   formData.name = row.name
   formData.code = row.code
   formLoading.value = true
   try {
-    formData.value.menuIds = await PermissionApi.getRoleMenuList(row.id)
+    formData.menuIds = await PermissionApi.getRoleMenuList(row.id)
     // 设置选中
-    formData.value.menuIds.forEach((menuId: number) => {
+    formData.menuIds.forEach((menuId: number) => {
       treeRef.value.setChecked(menuId, true, false)
     })
   } finally {
@@ -123,7 +127,7 @@ const submitForm = async () => {
   formLoading.value = true
   try {
     const data = {
-      roleId: formData.id,
+      roleId: formData.id!,
       menuIds: [
         ...(treeRef.value.getCheckedKeys(false) as unknown as Array<number>), // 获得当前选中节点
         ...(treeRef.value.getHalfCheckedKeys() as unknown as Array<number>) // 获得半选中的父节点
@@ -145,12 +149,10 @@ const resetForm = () => {
   treeNodeAll.value = false
   menuExpand.value = false
   // 重置表单
-  formData.value = {
-    id: undefined,
-    name: '',
-    code: '',
-    menuIds: []
-  }
+  formData.id = undefined
+  formData.name = ''
+  formData.code = ''
+  formData.menuIds = []
   treeRef.value?.setCheckedNodes([])
   formRef.value?.resetFields()
 }

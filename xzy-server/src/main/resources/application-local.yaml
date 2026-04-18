@@ -243,6 +243,9 @@ xzy:
   wxa-subscribe-message:
     miniprogram-state: developer # 跳转小程序类型：开发版为 “developer”；体验版为 “trial”为；正式版为 “formal”
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
+  dingtalk: # 钉钉企业内应用配置
+    app-key: dingrnmq1m8gj78hs46f # 请替换为你的钉钉 AppKey
+    app-secret: bhTlGTUCXnrsVbuPf6Kh7xx70QgrV3TmZZlHNx60aoUZc6iYmg-mSh24ABY6pYJI # 请替换为你的钉钉 AppSecret
 
 justauth:
   enabled: true

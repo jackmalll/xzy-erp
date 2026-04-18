@@ -123,12 +123,4 @@ public class PermissionController {
         return success(permissionService.getAssignableMenuIdsByOperator(operatorUserId));
     }
 
-    @Operation(summary = "获得当前操作者可分配给用户的角色编号集合")
-    @GetMapping("/list-assignable-roles")
-    @PreAuthorize("@ss.hasPermission('system:permission:assign-user-role')")
-    public CommonResult<Set<Long>> getAssignableRoleIds() {
-        Long operatorUserId = SecurityFrameworkUtils.getLoginUserId();
-        return success(permissionService.getAssignableRoleIdsByOperator(operatorUserId));
-    }
-
 }

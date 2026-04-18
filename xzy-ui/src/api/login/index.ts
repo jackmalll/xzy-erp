@@ -1,5 +1,5 @@
 import request from '@/config/axios'
-import type { RegisterVO, UserLoginVO } from './types'
+import type { DingTalkLoginVO, RegisterVO, UserLoginVO } from './types'
 
 export interface SmsCodeVO {
   mobile: string
@@ -88,4 +88,9 @@ export const reqCheck = (data: any) => {
 // 通过短信重置密码
 export const smsResetPassword = (data: any) => {
   return request.post({ url: '/system/auth/reset-password', data })
+}
+
+// 钉钉免密登录
+export const dingTalkLogin = (data: DingTalkLoginVO) => {
+  return request.post({ url: '/system/auth/dingtalk-login', data })
 }
