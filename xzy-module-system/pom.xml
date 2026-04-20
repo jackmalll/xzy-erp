@@ -37,6 +37,10 @@
             <groupId>cn.xzy</groupId>
             <artifactId>xzy-spring-boot-starter-biz-ip</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cn.xzy</groupId>
+            <artifactId>xzy-spring-boot-starter-job</artifactId>
+        </dependency>
 
         <!-- Web 相关 -->
         <dependency>

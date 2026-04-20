@@ -15,4 +15,16 @@ public interface RedisKeyConstants {
      */
     String NO = "erp:seq_no:";
 
+    /**
+     * 领星 access_token 缓存
+     * KEY 固定值；VALUE：access_token 字符串；TTL = 7000s
+     */
+    String LINGXING_ACCESS_TOKEN = "erp:lingxing:access_token";
+
+    /**
+     * 领星 refresh_token 缓存
+     * KEY 固定值；VALUE：refresh_token 字符串；TTL = 7000s
+     */
+    String LINGXING_REFRESH_TOKEN = "erp:lingxing:refresh_token";
+
 }

@@ -1,4 +1,4 @@
-package cn.xzy.module.erp.controller.admin.purchase.vo.sync;
+package cn.xzy.module.erp.controller.admin.purchase.vo.order;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

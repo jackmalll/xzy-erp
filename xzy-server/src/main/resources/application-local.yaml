@@ -6,7 +6,7 @@ spring:
   autoconfigure:
     # noinspection SpringBootApplicationYaml
     exclude:
-      - org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration # 默认 local 环境，不开启 Quartz 的自动配置
+#      - org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration # 默认 local 环境，不开启 Quartz 的自动配置
       - org.springframework.ai.vectorstore.qdrant.autoconfigure.QdrantVectorStoreAutoConfiguration # 禁用 AI 模块的 Qdrant，手动创建
       - org.springframework.ai.vectorstore.milvus.autoconfigure.MilvusVectorStoreAutoConfiguration # 禁用 AI 模块的 Milvus，手动创建
   # 数据源配置项
@@ -279,3 +279,11 @@ justauth:
     type: REDIS
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
+
+--- #################### 领星 OpenAPI 配置 ####################
+xzy:
+  lingxing:
+    endpoint: https://openapi.lingxing.com
+    app-id: ak_Q1fdTAYK1XozF
+    app-secret: KUGvgmFhEc6d76NZbiaCkA==
+   # sync-days: 3 # 增量同步天数，每次拉取最近 N 天按 update_time 变化的采购订单
