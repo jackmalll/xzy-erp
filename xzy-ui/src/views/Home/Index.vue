@@ -329,12 +329,6 @@ const getShortcut = async () => {
       color: '#7c3aed'
     },
     {
-      name: 'ERP 系统',
-      icon: 'simple-icons:erpnext',
-      url: '/erp/home',
-      color: '#3fb27f'
-    },
-    {
       name: 'CRM 系统',
       icon: 'simple-icons:civicrm',
       url: '/crm/backlog',
