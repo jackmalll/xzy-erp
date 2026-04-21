@@ -1,9 +1,11 @@
 package cn.xzy.module.erp.lingxing.sign;
 
+import cn.hutool.json.JSONUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -28,7 +30,13 @@ public class LingxingApiSign {
         Arrays.sort(keys);
         StringBuilder sb = new StringBuilder();
         for (String key : keys) {
-            String value = String.valueOf(params.get(key));
+            Object raw = params.get(key);
+            String value;
+            if (raw instanceof Collection || (raw != null && raw.getClass().isArray())) {
+                value = JSONUtil.toJsonStr(raw);
+            } else {
+                value = String.valueOf(raw);
+            }
             if (value.isEmpty()) {
                 continue;
             }

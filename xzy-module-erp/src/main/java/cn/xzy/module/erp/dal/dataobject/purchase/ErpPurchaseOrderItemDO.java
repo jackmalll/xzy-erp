@@ -62,4 +62,9 @@ public class ErpPurchaseOrderItemDO extends BaseDO {
      */
     private Integer quantityReal;
 
+    /**
+     * 产品图片链接（来自领星本地产品列表接口）
+     */
+    private String picUrl;
+
 }

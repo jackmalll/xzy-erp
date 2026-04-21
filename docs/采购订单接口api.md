@@ -33,7 +33,7 @@ Json Object
 | data>>order_sn                          | 采购单号                                                     | 是   | [string] | PO201019001                          |
 | data>>opt_realname                      | 采购员姓名                                                   | 是   | [string] | 测试人员                             |
 | data>>create_time                       | 创建时间                                                     | 是   | [string] | 2020-10-19 10:43:01                  |
-| data>>payment                           | 应付货款（手工）                                             | 是   | [string] | 0.00                                 |
+| data>>amount_total                      | 货物总价                                                     | 是   | [number] | 0.00                                 |
 | data>>last_time                         | 最后操作时间                                                 | 是   | [string] | 2020-10-19 10:43:01                  |
 | data>>is_tax                            | 是否含税：0 否，1 是                                         | 是   | [int]    |                                      |
 | data>>status                            | 采购单状态： -1 作废 3 待提交 1 待下单 - 已审核 2 待签收(待到货) - 已下单 9 完成 121 (审批流)待审核 122 (审批流)驳回 124 (审批流)作废 | 是   | [int]    | 1                                    |

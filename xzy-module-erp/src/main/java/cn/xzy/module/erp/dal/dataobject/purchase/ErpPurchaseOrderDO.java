@@ -52,9 +52,9 @@ public class ErpPurchaseOrderDO extends BaseDO {
     private Integer isTax;
 
     /**
-     * 应付货款（手工），单位：元
+     * 货物总价，单位：元
      */
-    private BigDecimal payment;
+    private BigDecimal amountTotal;
 
     /**
      * 运费，单位：元

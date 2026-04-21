@@ -52,4 +52,4 @@ application-my.yaml
 
 /xzy-ui-app/unpackage/
 **/.DS_Store
-sql/
+# sql/

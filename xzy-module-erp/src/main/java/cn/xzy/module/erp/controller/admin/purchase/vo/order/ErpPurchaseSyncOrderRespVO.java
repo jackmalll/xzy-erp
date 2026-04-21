@@ -37,10 +37,10 @@ public class ErpPurchaseSyncOrderRespVO {
     private String lastTime;
 
     /**
-     * 应付货款（手工）
+     * 货物总价
      */
-    @JsonProperty("payment")
-    private BigDecimal payment;
+    @JsonProperty("amount_total")
+    private BigDecimal amountTotal;
 
     /**
      * 是否含税：0否 1是
