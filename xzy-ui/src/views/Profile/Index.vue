@@ -13,13 +13,10 @@
       <div>
         <el-tabs v-model="activeName" class="profile-tabs" style="height: 400px" tab-position="top">
           <el-tab-pane :label="t('profile.info.basicInfo')" name="basicInfo">
-            <BasicInfo @success="handleBasicInfoSuccess" />
+            <BasicInfo :is-super-admin="isSuperAdmin" @success="handleBasicInfoSuccess" />
           </el-tab-pane>
-          <el-tab-pane :label="t('profile.info.resetPwd')" name="resetPwd">
+          <el-tab-pane v-if="isSuperAdmin" :label="t('profile.info.resetPwd')" name="resetPwd">
             <ResetPwd />
-          </el-tab-pane>
-          <el-tab-pane :label="t('profile.info.userSocial')" name="userSocial">
-            <UserSocial v-model:activeName="activeName" />
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -27,12 +24,15 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { BasicInfo, ProfileUser, ResetPwd, UserSocial } from './components'
+import { BasicInfo, ProfileUser, ResetPwd } from './components'
+import { useUserStore } from '@/store/modules/user'
 
 const { t } = useI18n()
 defineOptions({ name: 'Profile' })
 const activeName = ref('basicInfo')
 const profileUserRef = ref()
+const userStore = useUserStore()
+const isSuperAdmin = userStore.getRoles.includes('super_admin')
 
 // 处理基本信息更新成功
 const handleBasicInfoSuccess = async () => {

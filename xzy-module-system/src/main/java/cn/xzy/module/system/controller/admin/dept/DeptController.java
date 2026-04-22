@@ -3,12 +3,14 @@ package cn.xzy.module.system.controller.admin.dept;
 import cn.xzy.framework.common.enums.CommonStatusEnum;
 import cn.xzy.framework.common.pojo.CommonResult;
 import cn.xzy.framework.common.util.object.BeanUtils;
+import cn.xzy.framework.security.core.util.SecurityFrameworkUtils;
 import cn.xzy.module.system.controller.admin.dept.vo.dept.DeptListReqVO;
 import cn.xzy.module.system.controller.admin.dept.vo.dept.DeptRespVO;
 import cn.xzy.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
 import cn.xzy.module.system.controller.admin.dept.vo.dept.DeptSimpleRespVO;
 import cn.xzy.module.system.dal.dataobject.dept.DeptDO;
 import cn.xzy.module.system.service.dept.DeptService;
+import cn.xzy.module.system.service.permission.PermissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static cn.xzy.framework.common.pojo.CommonResult.success;
 
@@ -30,6 +34,8 @@ public class DeptController {
 
     @Resource
     private DeptService deptService;
+    @Resource
+    private PermissionService permissionService;
 
     @PostMapping("create")
     @Operation(summary = "创建部门")
@@ -78,6 +84,11 @@ public class DeptController {
     public CommonResult<List<DeptSimpleRespVO>> getSimpleDeptList() {
         List<DeptDO> list = deptService.getDeptList(
                 new DeptListReqVO().setStatus(CommonStatusEnum.ENABLE.getStatus()));
+        // 非超管：只返回当前用户所属部门及其子部门
+        Set<Long> deptScope = permissionService.getOperatorDeptScope(SecurityFrameworkUtils.getLoginUserId());
+        if (deptScope != null) {
+            list = list.stream().filter(dept -> deptScope.contains(dept.getId())).collect(Collectors.toList());
+        }
         return success(BeanUtils.toBean(list, DeptSimpleRespVO.class));
     }
 

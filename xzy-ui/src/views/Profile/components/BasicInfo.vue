@@ -1,13 +1,13 @@
 <template>
-  <Form ref="formRef" :labelWidth="200" :rules="rules" :schema="schema">
+  <Form ref="formRef" :labelWidth="200" :rules="isSuperAdmin ? rules : {}" :schema="schema">
     <template #sex="form">
-      <el-radio-group v-model="form['sex']">
+      <el-radio-group v-model="form['sex']" :disabled="!isSuperAdmin">
         <el-radio :value="1">{{ t('profile.user.man') }}</el-radio>
         <el-radio :value="2">{{ t('profile.user.woman') }}</el-radio>
       </el-radio-group>
     </template>
   </Form>
-  <div style="text-align: center">
+  <div v-if="isSuperAdmin" style="text-align: center">
     <XButton :title="t('common.save')" type="primary" @click="submit()" />
     <XButton :title="t('common.reset')" type="danger" @click="init()" />
   </div>
@@ -24,6 +24,10 @@ import {
 import { useUserStore } from '@/store/modules/user'
 
 defineOptions({ name: 'BasicInfo' })
+
+const props = defineProps<{
+  isSuperAdmin: boolean
+}>()
 
 const { t } = useI18n()
 const message = useMessage() // 消息弹窗
@@ -54,27 +58,31 @@ const rules = reactive<FormRules>({
     }
   ]
 })
-const schema = reactive<FormSchema[]>([
+const schema = computed<FormSchema[]>(() => [
   {
     field: 'nickname',
     label: t('profile.user.nickname'),
-    component: 'Input'
+    component: 'Input',
+    componentProps: { disabled: !props.isSuperAdmin }
   },
   {
     field: 'mobile',
     label: t('profile.user.mobile'),
-    component: 'Input'
+    component: 'Input',
+    componentProps: { disabled: !props.isSuperAdmin }
   },
   {
     field: 'email',
     label: t('profile.user.email'),
-    component: 'Input'
+    component: 'Input',
+    componentProps: { disabled: !props.isSuperAdmin }
   },
   {
     field: 'sex',
     label: t('profile.user.sex'),
     component: 'InputNumber',
-    value: 0
+    value: 0,
+    componentProps: { disabled: !props.isSuperAdmin }
   }
 ])
 const formRef = ref<FormExpose>() // 表单 Ref

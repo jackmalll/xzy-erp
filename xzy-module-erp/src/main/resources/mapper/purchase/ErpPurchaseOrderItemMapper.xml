@@ -31,7 +31,7 @@
     </select>
 
     <!--
-        查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间倒序，限前 limit 条）
+        查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间正序，最早的为第1次）
     -->
     <select id="selectHistoryPricesBySku"
             resultType="cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseOrderItemDetailVO$HistoryPrice">
@@ -40,7 +40,7 @@
         JOIN erp_purchase_order o ON o.order_sn = i.order_sn
         WHERE i.sku = #{sku}
           AND i.order_sn != #{excludeOrderSn}
-        ORDER BY o.lx_create_time DESC
+        ORDER BY o.lx_create_time ASC
         LIMIT #{limit}
     </select>
 

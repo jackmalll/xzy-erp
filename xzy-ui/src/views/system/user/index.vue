@@ -216,11 +216,16 @@ import UserForm from './UserForm.vue'
 import UserImportForm from './UserImportForm.vue'
 import UserAssignRoleForm from './UserAssignRoleForm.vue'
 import DeptTreeSelect from '@/views/system/dept/components/DeptTreeSelect.vue'
+import { useUserStore } from '@/store/modules/user'
 
 defineOptions({ name: 'SystemUser' })
 
 const message = useMessage() // 消息弹窗
 const { t } = useI18n() // 国际化
+const userStore = useUserStore()
+
+const isSuperAdmin = userStore.getRoles.includes('super_admin')
+const initDeptId = isSuperAdmin ? undefined : (userStore.getUser.deptId || undefined)
 
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
@@ -231,7 +236,7 @@ const queryParams = reactive({
   username: undefined,
   mobile: undefined,
   status: undefined,
-  deptId: undefined,
+  deptId: initDeptId,
   createTime: []
 })
 const queryFormRef = ref() // 搜索的表单
@@ -257,6 +262,7 @@ const handleQuery = () => {
 /** 重置按钮操作 */
 const resetQuery = () => {
   queryFormRef.value?.resetFields()
+  queryParams.deptId = initDeptId
   handleQuery()
 }
 

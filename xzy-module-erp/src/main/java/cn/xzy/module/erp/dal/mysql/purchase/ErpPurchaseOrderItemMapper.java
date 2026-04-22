@@ -31,7 +31,7 @@ public interface ErpPurchaseOrderItemMapper extends BaseMapperX<ErpPurchaseOrder
     }
 
     /**
-     * 查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间倒序，限前 limit 条）
+     * 查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间正序，最早的为第1次，限前 limit 条）
      */
     List<ErpPurchaseOrderItemDetailVO.HistoryPrice> selectHistoryPricesBySku(
             @Param("sku") String sku,
