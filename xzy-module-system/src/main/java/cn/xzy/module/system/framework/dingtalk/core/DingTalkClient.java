@@ -10,6 +10,9 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static cn.xzy.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.xzy.module.system.enums.ErrorCodeConstants.AUTH_DINGTALK_AUTH_CODE_ERROR;
 
@@ -26,6 +29,7 @@ public class DingTalkClient {
     private static final String GET_TOKEN_URL = "https://oapi.dingtalk.com/gettoken";
     private static final String GET_USER_INFO_URL = "https://oapi.dingtalk.com/topapi/v2/user/getuserinfo";
     private static final String GET_USER_DETAIL_URL = "https://oapi.dingtalk.com/topapi/v2/user/get";
+    private static final String LIST_SUB_DEPT_URL = "https://oapi.dingtalk.com/topapi/v2/department/listsub";
 
     /**
      * 获取钉钉 access_token
@@ -108,6 +112,49 @@ public class DingTalkClient {
         }
 
         return result.getJSONObject("result").getStr("mobile");
+    }
+
+    /**
+     * 获取钉钉部门列表（递归获取指定父部门下所有子部门）
+     *
+     * @param parentId 父部门ID，根部门传 1
+     * @return 部门信息列表，每个元素包含 dept_id、name、parent_id、order 字段
+     */
+    public List<JSONObject> getDeptList(Long parentId) {
+        String accessToken = getAccessToken();
+        List<JSONObject> allDepts = new ArrayList<>();
+        fetchDeptListRecursive(accessToken, parentId, allDepts);
+        return allDepts;
+    }
+
+    /**
+     * 递归拉取子部门列表
+     */
+    private void fetchDeptListRecursive(String accessToken, Long parentId, List<JSONObject> result) {
+        String url = StrUtil.format("{}?access_token={}", LIST_SUB_DEPT_URL, accessToken);
+
+        JSONObject body = new JSONObject();
+        body.set("dept_id", parentId);
+
+        HttpResponse response = HttpRequest.post(url)
+                .body(body.toString())
+                .execute();
+
+        JSONObject res = JSONUtil.parseObj(response.body());
+
+        if (res.getInt("errcode") != 0) {
+            log.error("[getDeptList][获取钉钉部门列表失败：parentId={}, result={}]", parentId, res);
+            throw exception(AUTH_DINGTALK_AUTH_CODE_ERROR, res.getStr("errmsg"));
+        }
+
+        List<JSONObject> depts = JSONUtil.toList(res.getJSONArray("result"), JSONObject.class);
+        if (depts == null || depts.isEmpty()) {
+            return;
+        }
+        result.addAll(depts);
+        for (JSONObject dept : depts) {
+            fetchDeptListRecursive(accessToken, dept.getLong("dept_id"), result);
+        }
     }
 
 }

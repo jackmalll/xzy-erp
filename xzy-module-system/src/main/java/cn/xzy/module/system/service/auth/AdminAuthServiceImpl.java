@@ -310,11 +310,18 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     @Override
     public AuthLoginRespVO dingTalkLogin(AuthDingTalkLoginReqVO reqVO) {
         // 1. 通过钉钉免登授权码获取用户手机号
-        String mobile = dingTalkClient.getUserMobileByAuthCode(reqVO.getAuthCode());
+        String mobile;
+        try {
+            mobile = dingTalkClient.getUserMobileByAuthCode(reqVO.getAuthCode());
+        } catch (Exception e) {
+            createLoginLog(null, reqVO.getAuthCode(), LoginLogTypeEnum.LOGIN_DINGTALK, LoginResultEnum.BAD_CREDENTIALS);
+            throw e;
+        }
 
         // 2. 根据手机号查询用户
         AdminUserDO user = userService.getUserByMobile(mobile);
         if (user == null) {
+            createLoginLog(null, mobile, LoginLogTypeEnum.LOGIN_DINGTALK, LoginResultEnum.MOBILE_NOT_REGISTERED);
             throw exception(AUTH_DINGTALK_MOBILE_NOT_MATCH);
         }
 

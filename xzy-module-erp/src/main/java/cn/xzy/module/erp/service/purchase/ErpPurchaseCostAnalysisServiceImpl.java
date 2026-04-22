@@ -63,6 +63,9 @@ public class ErpPurchaseCostAnalysisServiceImpl implements ErpPurchaseCostAnalys
                 })
                 .toList();
         long total = allVoList.size();
+        if (pageReqVO.getPageSize() <= 0) {
+            return new PageResult<>(allVoList, total);
+        }
         int fromIndex = (pageReqVO.getPageNo() - 1) * pageReqVO.getPageSize();
         int toIndex = Math.min(fromIndex + pageReqVO.getPageSize(), (int) total);
         List<ErpPurchaseCostAnalysisRespVO> pagedList = fromIndex >= total

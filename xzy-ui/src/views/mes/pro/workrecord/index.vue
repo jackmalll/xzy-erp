@@ -1,6 +1,6 @@
 <!-- MES 工作记录列表 -->
 <template>
-  <doc-alert title="【生产】工作记录" url="https://doc.iocoder.cn/mes/workrecord/" />
+  
 
   <ContentWrap>
     <WorkRecordStatusBar @change="getList" />

@@ -286,4 +286,3 @@ xzy:
     endpoint: https://openapi.lingxing.com
     app-id: ak_Q1fdTAYK1XozF
     app-secret: KUGvgmFhEc6d76NZbiaCkA==
-   # sync-days: 3 # 增量同步天数，每次拉取最近 N 天按 update_time 变化的采购订单

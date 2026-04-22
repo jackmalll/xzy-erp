@@ -47,22 +47,22 @@ spring:
       primary: master
       datasource:
         master:
-          url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
-          username: root
-          password: 123456
-        slave: # 模拟从库，可根据自己需要修改 # 模拟从库，可根据自己需要修改
-          lazy: true # 开启懒加载，保证启动速度
-          url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
-          username: root
-          password: 123456
+          url: jdbc:mysql://192.168.1.5:3306/xzy-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
+          username: xzy
+          password: "xzy@123456"
+#        slave: # 模拟从库，可根据自己需要修改 # 模拟从库，可根据自己需要修改
+#          lazy: true # 开启懒加载，保证启动速度
+#          url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true # MySQL Connector/J 8.X 连接的示例
+#          username: root
+#          password: 123456
 
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优
   data:
     redis:
-      host: 400-infra.server.iocoder.cn # 地址
+      host: 192.168.1.5 # 地址
       port: 6379 # 端口
       database: 1 # 数据库索引
-#    password: 123456 # 密码，建议生产环境开启
+      password: "xzy@123456" # 密码，建议生产环境开启
 
 --- #################### 定时任务相关配置 ####################
 
@@ -177,7 +177,9 @@ xzy:
     transfer-notify-url: https://yunai.natapp1.cc/admin-api/pay/notify/transfer # 支付渠道的【转账】回调地址
   demo: false # 开启演示模式
   tencent-lbs-key: TVDBZ-TDILD-4ON4B-PFDZA-RNLKH-VVF6E # QQ 地图的密钥 https://lbs.qq.com/service/staticV2/staticGuide/staticDoc
-
+  dingtalk: # 钉钉企业内应用配置
+    app-key: dingrnmq1m8gj78hs46f # 请替换为你的钉钉 AppKey
+    app-secret: bhTlGTUCXnrsVbuPf6Kh7xx70QgrV3TmZZlHNx60aoUZc6iYmg-mSh24ABY6pYJI # 请替换为你的钉钉 AppSecret
 justauth:
   enabled: true
   type:
@@ -210,3 +212,10 @@ justauth:
     type: REDIS
     prefix: 'social_auth_state:' # 缓存前缀，目前只对 Redis 缓存生效，默认 JUSTAUTH::STATE::
     timeout: 24h # 超时时长，目前只对 Redis 缓存生效，默认 3 分钟
+
+--- #################### 领星 OpenAPI 配置 ####################
+xzy:
+  lingxing:
+    endpoint: https://openapi.lingxing.com
+    app-id: ak_Q1fdTAYK1XozF
+    app-secret: KUGvgmFhEc6d76NZbiaCkA==

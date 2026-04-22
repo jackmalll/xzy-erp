@@ -45,4 +45,4 @@ CREATE TABLE `erp_purchase_order_item` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_lx_item_id` (`lx_item_id`),
   KEY `idx_order_sn` (`order_sn`)
-) ENGINE=InnoDB AUTO_INCREMENT=6471 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='采购订单子项表（来源：领星 ERP）';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='采购订单子项表（来源：领星 ERP）';
