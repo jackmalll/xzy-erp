@@ -1,38 +1,53 @@
 <template>
   <div class="dingtalk-login-container">
-    <div class="status-card">
-      <div v-if="loading" class="status-inner">
-        <div class="status-top">
-          <span class="spinner"></span>
-          <span class="status-text">正在通过钉钉登录</span>
-        </div>
-        <p class="status-desc">授权成功后将自动进入统一报表平台</p>
+    <div class="dingtalk-login-content">
+      <div class="brand-section">
+        <img :src="logoImg" alt="统一报表平台" class="brand-logo" />
+        <h1 class="brand-title">统一报表平台</h1>
       </div>
-      <div v-else-if="error" class="status-inner">
-        <el-icon color="#f56c6c" :size="36">
-          <CircleClose />
-        </el-icon>
-        <p class="error-message">{{ error }}</p>
-        <el-button type="primary" @click="handleRetry">返回登录页</el-button>
+      <div class="status-card">
+        <div v-if="loading" class="status-inner">
+          <div class="status-top">
+            <span class="spinner"></span>
+            <span class="status-text">正在通过钉钉登录</span>
+          </div>
+          <p class="status-desc">授权成功后将自动进入统一报表平台</p>
+        </div>
+        <div v-else-if="successMessage" class="status-inner">
+          <el-icon color="#67c23a" :size="36">
+            <CircleCheckFilled />
+          </el-icon>
+          <p class="success-message">{{ successMessage }}</p>
+        </div>
+        <div v-else-if="error" class="status-inner">
+          <el-icon color="#f56c6c" :size="36">
+            <CircleClose />
+          </el-icon>
+          <p class="error-message">{{ error }}</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import logoImg from '@/assets/imgs/logo.png'
 import { dingTalkLogin } from '@/api/login'
 import { useUserStore } from '@/store/modules/user'
 import { deleteUserCache } from '@/hooks/web/useCache'
 import * as authUtil from '@/utils/auth'
 import * as dd from 'dingtalk-jsapi'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(true)
 const error = ref('')
+const successMessage = ref('')
+const isLogoutMode = computed(() => route.query.mode === 'logout')
 
 // 钉钉企业 corpId（从环境变量或配置中读取）
 const DINGTALK_CORP_ID = import.meta.env.VITE_DINGTALK_CORP_ID || 'your_corp_id'
@@ -54,6 +69,12 @@ onMounted(() => {
   authUtil.removeToken()
   deleteUserCache()
   userStore.resetState()
+
+  if (isLogoutMode.value) {
+    loading.value = false
+    successMessage.value = '退出成功'
+    return
+  }
 
   if (!isDingTalkEnv()) {
     error.value = '请在钉钉客户端中打开'
@@ -84,6 +105,7 @@ onMounted(() => {
         try {
           const res = await dingTalkLogin({ authCode: result.code })
 
+          authUtil.setDingTalkLoginSource()
           authUtil.setToken(res)
 
           ElMessage.success('登录成功')
@@ -92,7 +114,7 @@ onMounted(() => {
         } catch (err) {
           isLoggingIn = false
           loading.value = false
-          error.value = (err as DingTalkError).message || '登录失败，请重试'
+          error.value = (err as DingTalkError).message || '登录失败，请联系管理员'
           ElMessage.error(error.value)
         }
       })
@@ -111,9 +133,7 @@ onMounted(() => {
   })
 })
 
-const handleRetry = () => {
-  router.push('/login')
-}
+
 </script>
 
 <style scoped lang="scss">
@@ -123,6 +143,42 @@ const handleRetry = () => {
   justify-content: center;
   min-height: 100vh;
   background: #ffffff;
+}
+
+.dingtalk-login-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.brand-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo {
+  width: 240px;
+  max-width: 60vw;
+  object-fit: contain;
+}
+
+.brand-title {
+  margin: 0;
+  color: #2f95d1;
+  font-size: 30px;
+  font-weight: 700;
+  font-family: 'SimHei', 'Microsoft YaHei', sans-serif;
+  line-height: 1.2;
+}
+
+.success-message {
+  color: #67c23a;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .status-card {

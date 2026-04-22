@@ -271,6 +271,7 @@ const handleLogin = async (params: any) => {
     } else {
       authUtil.removeLoginForm()
     }
+    authUtil.removeDingTalkLoginSource()
     authUtil.setToken(res)
     if (!redirect.value) {
       redirect.value = '/'

@@ -7,7 +7,6 @@ export default {
     login: 'Login',
     required: 'This is required',
     loginOut: 'Login out',
-    document: 'Document',
     profile: 'User Center',
     reminder: 'Reminder',
     loginOutMessage: 'Exit the system?',

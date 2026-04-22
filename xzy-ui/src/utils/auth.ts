@@ -61,6 +61,18 @@ export const removeLoginForm = () => {
   wsCache.delete(CACHE_KEY.LoginForm)
 }
 
+export const setDingTalkLoginSource = () => {
+  wsCache.set(CACHE_KEY.DingTalkLoginSource, true)
+}
+
+export const getDingTalkLoginSource = () => {
+  return !!wsCache.get(CACHE_KEY.DingTalkLoginSource)
+}
+
+export const removeDingTalkLoginSource = () => {
+  wsCache.delete(CACHE_KEY.DingTalkLoginSource)
+}
+
 // ========== 租户相关 ==========
 
 export const getTenantId = () => {

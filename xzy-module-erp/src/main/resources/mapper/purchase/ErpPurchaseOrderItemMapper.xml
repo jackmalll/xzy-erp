@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.xzy.module.erp.dal.mysql.purchase.ErpPurchaseOrderItemMapper">
+
+    <!--
+        批量计算指定订单列表的降本金额。
+        逻辑：对每个订单的每个 SKU，取该 SKU 在本订单之外最近一次采购单价作为历史价，
+        降本金额 = SUM((历史单价 - 本次单价) × 本次采购数量)，无历史价的 SKU 不参与计算。
+    -->
+    <select id="selectCostReductionByOrderSnList" resultType="map">
+        SELECT
+            cur.order_sn AS orderSn,
+            COALESCE(SUM((hist_price.price - cur.price) * cur.quantity_real), 0) AS costReduction
+        FROM erp_purchase_order_item cur
+        LEFT JOIN (
+            SELECT
+                i2.sku,
+                i2.order_sn AS exclude_order_sn,
+                i2.price,
+                ROW_NUMBER() OVER (PARTITION BY i2.sku, i2.order_sn ORDER BY o2.lx_create_time DESC) AS rn
+            FROM erp_purchase_order_item i2
+            JOIN erp_purchase_order o2 ON o2.order_sn = i2.order_sn
+        ) hist_price ON hist_price.sku = cur.sku
+            AND hist_price.exclude_order_sn != cur.order_sn
+            AND hist_price.rn = 1
+        WHERE cur.order_sn IN
+        <foreach item="sn" collection="orderSnList" open="(" separator="," close=")">
+            #{sn}
+        </foreach>
+        GROUP BY cur.order_sn
+    </select>
+
+    <!--
+        查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间倒序，限前 limit 条）
+    -->
+    <select id="selectHistoryPricesBySku"
+            resultType="cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseOrderItemDetailVO$HistoryPrice">
+        SELECT i.price, o.lx_create_time AS purchaseDate
+        FROM erp_purchase_order_item i
+        JOIN erp_purchase_order o ON o.order_sn = i.order_sn
+        WHERE i.sku = #{sku}
+          AND i.order_sn != #{excludeOrderSn}
+        ORDER BY o.lx_create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

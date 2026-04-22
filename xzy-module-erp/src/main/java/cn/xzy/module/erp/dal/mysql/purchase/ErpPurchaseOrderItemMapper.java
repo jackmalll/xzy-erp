@@ -5,9 +5,10 @@ import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseOr
 import cn.xzy.module.erp.dal.dataobject.purchase.ErpPurchaseOrderItemDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ERP 采购订单子项 Mapper
@@ -32,15 +33,24 @@ public interface ErpPurchaseOrderItemMapper extends BaseMapperX<ErpPurchaseOrder
     /**
      * 查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间倒序，限前 limit 条）
      */
-    @Select("SELECT i.price, o.lx_create_time AS purchaseDate " +
-            "FROM erp_purchase_order_item i " +
-            "JOIN erp_purchase_order o ON o.order_sn = i.order_sn " +
-            "WHERE i.sku = #{sku} AND i.order_sn != #{excludeOrderSn} " +
-            "ORDER BY o.lx_create_time DESC " +
-            "LIMIT #{limit}")
     List<ErpPurchaseOrderItemDetailVO.HistoryPrice> selectHistoryPricesBySku(
             @Param("sku") String sku,
             @Param("excludeOrderSn") String excludeOrderSn,
             @Param("limit") int limit);
+
+    /**
+     * 批量查询多个订单的子项列表
+     */
+    default List<ErpPurchaseOrderItemDO> selectListByOrderSnIn(Collection<String> orderSnList) {
+        return selectList(ErpPurchaseOrderItemDO::getOrderSn, orderSnList);
+    }
+
+    /**
+     * 批量计算指定订单列表的降本金额。
+     * 逻辑：对每个订单的每个 SKU，取该 SKU 在本订单之外最近一次采购单价作为历史价，
+     * 降本金额 = SUM((历史单价 - 本次单价) × 本次采购数量)，无历史价的 SKU 不参与计算。
+     * 返回：Map key=orderSn, value=costReduction
+     */
+    List<Map<String, Object>> selectCostReductionByOrderSnList(@Param("orderSnList") Collection<String> orderSnList);
 
 }

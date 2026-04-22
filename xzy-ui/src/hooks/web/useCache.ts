@@ -11,6 +11,7 @@ export const CACHE_KEY = {
   ROLE_ROUTERS: 'roleRouters',
   USER: 'user',
   VisitTenantId: 'visitTenantId',
+  DingTalkLoginSource: 'dingTalkLoginSource',
   // 系统设置
   IS_DARK: 'isDark',
   LANG: 'lang',

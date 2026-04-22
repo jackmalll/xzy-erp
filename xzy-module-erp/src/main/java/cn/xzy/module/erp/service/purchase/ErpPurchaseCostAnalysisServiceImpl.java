@@ -1,5 +1,6 @@
 package cn.xzy.module.erp.service.purchase;
 
+import cn.xzy.framework.common.pojo.PageParam;
 import cn.xzy.framework.common.pojo.PageResult;
 import cn.xzy.framework.common.util.object.BeanUtils;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostAnalysisPageReqVO;
@@ -13,7 +14,10 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 采购成本统计分析 Service 实现
@@ -29,44 +33,79 @@ public class ErpPurchaseCostAnalysisServiceImpl implements ErpPurchaseCostAnalys
 
     @Override
     public PageResult<ErpPurchaseCostAnalysisRespVO> getPurchaseCostAnalysisPage(ErpPurchaseCostAnalysisPageReqVO pageReqVO) {
-        PageResult<ErpPurchaseOrderDO> pageResult = purchaseOrderMapper.selectCostAnalysisPage(pageReqVO);
-        List<ErpPurchaseCostAnalysisRespVO> voList = pageResult.getList().stream()
-                .map(this::convertToRespVO)
+        boolean hasCostFilter = pageReqVO.getCostReductionMin() != null || pageReqVO.getCostReductionMax() != null;
+
+        if (!hasCostFilter) {
+            // 无降本金额过滤：正常分页，只查当页数据（2次批量SQL）
+            PageResult<ErpPurchaseOrderDO> pageResult = purchaseOrderMapper.selectCostAnalysisPage(pageReqVO);
+            List<ErpPurchaseCostAnalysisRespVO> voList = convertBatch(pageResult.getList());
+            return new PageResult<>(voList, pageResult.getTotal());
+        }
+
+        // 有降本金额过滤：全量拉取（仍是2次批量SQL），内存过滤后再手动分页
+        ErpPurchaseCostAnalysisPageReqVO allReqVO = new ErpPurchaseCostAnalysisPageReqVO();
+        allReqVO.setPageNo(1);
+        allReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);
+        allReqVO.setOrderSn(pageReqVO.getOrderSn());
+        allReqVO.setOptRealname(pageReqVO.getOptRealname());
+        allReqVO.setLxCreateTime(pageReqVO.getLxCreateTime());
+        PageResult<ErpPurchaseOrderDO> allResult = purchaseOrderMapper.selectCostAnalysisPage(allReqVO);
+        List<ErpPurchaseCostAnalysisRespVO> allVoList = convertBatch(allResult.getList()).stream()
+                .filter(vo -> {
+                    BigDecimal cr = vo.getCostReduction() != null ? vo.getCostReduction() : BigDecimal.ZERO;
+                    if (pageReqVO.getCostReductionMin() != null && cr.compareTo(pageReqVO.getCostReductionMin()) < 0) {
+                        return false;
+                    }
+                    if (pageReqVO.getCostReductionMax() != null && cr.compareTo(pageReqVO.getCostReductionMax()) > 0) {
+                        return false;
+                    }
+                    return true;
+                })
                 .toList();
-        return new PageResult<>(voList, pageResult.getTotal());
+        long total = allVoList.size();
+        int fromIndex = (pageReqVO.getPageNo() - 1) * pageReqVO.getPageSize();
+        int toIndex = Math.min(fromIndex + pageReqVO.getPageSize(), (int) total);
+        List<ErpPurchaseCostAnalysisRespVO> pagedList = fromIndex >= total
+                ? Collections.emptyList()
+                : allVoList.subList(fromIndex, toIndex);
+        return new PageResult<>(pagedList, total);
     }
 
-    private ErpPurchaseCostAnalysisRespVO convertToRespVO(ErpPurchaseOrderDO order) {
-        ErpPurchaseCostAnalysisRespVO vo = BeanUtils.toBean(order, ErpPurchaseCostAnalysisRespVO.class);
-
-        // 采购实付金额 = 货物总价 + 运费
-        BigDecimal payment = order.getAmountTotal() != null ? order.getAmountTotal() : BigDecimal.ZERO;
-        BigDecimal shippingPrice = order.getShippingPrice() != null ? order.getShippingPrice() : BigDecimal.ZERO;
-        BigDecimal actualPayment = payment.add(shippingPrice);
-        vo.setActualPayment(actualPayment);
-
-        // 查询子项列表，统计 SKU 种类数
-        List<ErpPurchaseOrderItemDO> items = purchaseOrderItemMapper.selectListByOrderSn(order.getOrderSn());
-        vo.setSkuCount(items.size());
-
-        // 降本金额 = 所有SKU的降本金额之和
-        // 每个SKU降本金额 = (第1次历史采购单价 - 本次采购单价) × 本次采购数量（无历史价则跳过）
-        BigDecimal totalCostReduction = BigDecimal.ZERO;
-        for (ErpPurchaseOrderItemDO item : items) {
-            List<ErpPurchaseOrderItemDetailVO.HistoryPrice> historyPrices =
-                    purchaseOrderItemMapper.selectHistoryPricesBySku(item.getSku(), order.getOrderSn(), 1);
-            if (historyPrices.isEmpty() || historyPrices.get(0).getPrice() == null) {
-                continue;
-            }
-            BigDecimal historyPrice = historyPrices.get(0).getPrice();
-            BigDecimal currentPrice = item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO;
-            int qty = item.getQuantityReal() != null ? item.getQuantityReal() : 0;
-            BigDecimal skuReduction = historyPrice.subtract(currentPrice).multiply(BigDecimal.valueOf(qty));
-            totalCostReduction = totalCostReduction.add(skuReduction);
+    /**
+     * 批量将订单 DO 转换为 RespVO，仅触发 2 次 SQL：
+     * 1. 批量查全部子项（IN 查询）
+     * 2. 批量计算降本金额（窗口函数聚合）
+     */
+    private List<ErpPurchaseCostAnalysisRespVO> convertBatch(List<ErpPurchaseOrderDO> orders) {
+        if (orders.isEmpty()) {
+            return Collections.emptyList();
         }
-        vo.setCostReduction(totalCostReduction);
+        List<String> orderSnList = orders.stream().map(ErpPurchaseOrderDO::getOrderSn).toList();
 
-        return vo;
+        // 1. 批量查子项，按 orderSn 分组，用于统计 SKU 种类数
+        List<ErpPurchaseOrderItemDO> allItems = purchaseOrderItemMapper.selectListByOrderSnIn(orderSnList);
+        Map<String, Long> skuCountMap = allItems.stream()
+                .collect(Collectors.groupingBy(ErpPurchaseOrderItemDO::getOrderSn, Collectors.counting()));
+
+        // 2. 批量用 SQL 窗口函数计算降本金额（一条 SQL 搞定所有订单）
+        List<Map<String, Object>> costRows = purchaseOrderItemMapper.selectCostReductionByOrderSnList(orderSnList);
+        Map<String, BigDecimal> costReductionMap = costRows.stream()
+                .collect(Collectors.toMap(
+                        row -> (String) row.get("orderSn"),
+                        row -> row.get("costReduction") instanceof BigDecimal
+                                ? (BigDecimal) row.get("costReduction")
+                                : new BigDecimal(row.get("costReduction").toString())
+                ));
+
+        return orders.stream().map(order -> {
+            ErpPurchaseCostAnalysisRespVO vo = BeanUtils.toBean(order, ErpPurchaseCostAnalysisRespVO.class);
+            BigDecimal payment = order.getAmountTotal() != null ? order.getAmountTotal() : BigDecimal.ZERO;
+            BigDecimal shippingPrice = order.getShippingPrice() != null ? order.getShippingPrice() : BigDecimal.ZERO;
+            vo.setActualPayment(payment.add(shippingPrice));
+            vo.setSkuCount(skuCountMap.getOrDefault(order.getOrderSn(), 0L).intValue());
+            vo.setCostReduction(costReductionMap.getOrDefault(order.getOrderSn(), BigDecimal.ZERO));
+            return vo;
+        }).toList();
     }
 
     @Override

@@ -2,6 +2,7 @@
 import { ElMessageBox } from 'element-plus'
 
 import avatarImg from '@/assets/imgs/avatar.gif'
+import * as authUtil from '@/utils/auth'
 import { useDesign } from '@/hooks/web/useDesign'
 import { useTagsViewStore } from '@/store/modules/tagsView'
 import { useUserStore } from '@/store/modules/user'
@@ -41,16 +42,15 @@ const loginOut = async () => {
       cancelButtonText: t('common.cancel'),
       type: 'warning'
     })
+    const isDingTalkLoginSource = authUtil.getDingTalkLoginSource()
     await userStore.loginOut()
+    authUtil.removeDingTalkLoginSource()
     tagsViewStore.delAllViews()
-    replace('/login?redirect=/index')
+    replace(isDingTalkLoginSource ? '/dingtalk-login?mode=logout' : '/login?redirect=/index')
   } catch {}
 }
 const toProfile = async () => {
   push('/user/profile')
-}
-const toDocument = () => {
-  window.open('https://doc.iocoder.cn/')
 }
 </script>
 
@@ -67,10 +67,6 @@ const toDocument = () => {
         <ElDropdownItem>
           <Icon icon="ep:tools" />
           <div @click="toProfile">{{ t('common.profile') }}</div>
-        </ElDropdownItem>
-        <ElDropdownItem>
-          <Icon icon="ep:menu" />
-          <div @click="toDocument">{{ t('common.document') }}</div>
         </ElDropdownItem>
         <ElDropdownItem divided>
           <Icon icon="ep:lock" />

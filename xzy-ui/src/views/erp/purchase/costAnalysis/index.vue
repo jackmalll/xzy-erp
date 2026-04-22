@@ -1,54 +1,75 @@
 <template>
   <ContentWrap>
     <el-form
-      class="-mb-15px"
       :model="queryParams"
       ref="queryFormRef"
-      :inline="true"
       label-width="90px"
     >
-      <el-form-item label="采购订单号" prop="orderSn">
-        <el-input
-          v-model="queryParams.orderSn"
-          placeholder="请输入采购订单号"
-          clearable
-          @keyup.enter="handleQuery"
-          class="!w-240px"
-        />
-      </el-form-item>
-      <el-form-item label="采购人" prop="optRealname">
-        <el-input
-          v-model="queryParams.optRealname"
-          placeholder="请输入采购人"
-          clearable
-          @keyup.enter="handleQuery"
-          class="!w-240px"
-        />
-      </el-form-item>
-      <el-form-item label="采购创建日期" prop="lxCreateTime" label-width="110px">
-        <el-date-picker
-          v-model="queryParams.lxCreateTime"
-          type="daterange"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          class="!w-240px"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button @click="handleQuery"><Icon icon="ep:search" class="mr-5px" /> 搜索</el-button>
-        <el-button @click="resetQuery"><Icon icon="ep:refresh" class="mr-5px" /> 重置</el-button>
-        <el-button
-          type="success"
-          plain
-          @click="handleExport"
-          :loading="exportLoading"
-          v-hasPermi="['erp:purchase-cost-analysis:export']"
-        >
-          <Icon icon="ep:download" class="mr-5px" /> 导出
-        </el-button>
-      </el-form-item>
+      <div class="flex items-center justify-between flex-wrap gap-y-10px">
+        <div class="flex items-center flex-wrap gap-y-10px">
+          <el-form-item label="采购订单号" prop="orderSn" class="!mb-0">
+            <el-input
+              v-model="queryParams.orderSn"
+              placeholder="请输入采购订单号"
+              clearable
+              @keyup.enter="handleQuery"
+              class="!w-240px"
+            />
+          </el-form-item>
+          <el-form-item label="采购人" prop="optRealname" class="!mb-0">
+            <el-input
+              v-model="queryParams.optRealname"
+              placeholder="请输入采购人"
+              clearable
+              @keyup.enter="handleQuery"
+              class="!w-240px"
+            />
+          </el-form-item>
+          <el-form-item label="采购创建日期" prop="lxCreateTime" label-width="110px" class="!mb-0">
+            <el-date-picker
+              v-model="queryParams.lxCreateTime"
+              type="daterange"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              class="!w-240px"
+            />
+          </el-form-item>
+          <el-form-item label="降本金额" label-width="80px" class="!mb-0">
+            <div class="flex items-center gap-4px">
+              <el-input-number
+                v-model="queryParams.costReductionMin"
+                placeholder="最小值"
+                :controls="false"
+                class="!w-110px"
+                @keyup.enter="handleQuery"
+              />
+              <span class="text-gray-400">~</span>
+              <el-input-number
+                v-model="queryParams.costReductionMax"
+                placeholder="最大值"
+                :controls="false"
+                class="!w-110px"
+                @keyup.enter="handleQuery"
+              />
+            </div>
+          </el-form-item>
+        </div>
+        <div class="flex items-center gap-8px flex-shrink-0">
+          <el-button type="primary" plain @click="handleQuery"><Icon icon="ep:search" class="mr-5px" /> 搜索</el-button>
+          <el-button @click="resetQuery"><Icon icon="ep:refresh" class="mr-5px" /> 重置</el-button>
+          <el-button
+            type="success"
+            plain
+            @click="handleExport"
+            :loading="exportLoading"
+            v-hasPermi="['erp:purchase-cost-analysis:export']"
+          >
+            <Icon icon="ep:download" class="mr-5px" /> 导出
+          </el-button>
+        </div>
+      </div>
     </el-form>
   </ContentWrap>
 
@@ -329,7 +350,9 @@ const queryParams = reactive({
   pageSize: 10,
   orderSn: undefined,
   optRealname: undefined,
-  lxCreateTime: undefined
+  lxCreateTime: undefined,
+  costReductionMin: undefined,
+  costReductionMax: undefined
 })
 const queryFormRef = ref()
 const exportLoading = ref(false)

@@ -255,6 +255,7 @@ const tryLogin = async () => {
     const state = route?.query?.state as string
 
     const res = await LoginApi.socialLogin(type, code, state)
+    authUtil.removeDingTalkLoginSource()
     authUtil.setToken(res)
 
     router.push({ path: redirect || '/' })

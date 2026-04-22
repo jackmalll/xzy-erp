@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static cn.xzy.framework.common.util.date.DateUtils.FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND;
@@ -24,5 +25,11 @@ public class ErpPurchaseCostAnalysisPageReqVO extends PageParam {
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     @Schema(description = "采购创建日期范围")
     private LocalDateTime[] lxCreateTime;
+
+    @Schema(description = "降本金额最小值（含），单位：元", example = "100.00")
+    private BigDecimal costReductionMin;
+
+    @Schema(description = "降本金额最大值（含），单位：元", example = "500.00")
+    private BigDecimal costReductionMax;
 
 }
