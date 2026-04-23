@@ -6,6 +6,8 @@ import cn.xzy.module.erp.dal.dataobject.purchase.ErpPurchaseOrderItemDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -31,11 +33,13 @@ public interface ErpPurchaseOrderItemMapper extends BaseMapperX<ErpPurchaseOrder
     }
 
     /**
-     * 查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间正序，最早的为第1次，限前 limit 条）
+     * 查询某 SKU 在排除指定订单号之外、同一采购员、且采购日期早于本次的历史采购记录（按采购创建时间正序，最早的为第1次，限前 limit 条）
      */
     List<ErpPurchaseOrderItemDetailVO.HistoryPrice> selectHistoryPricesBySku(
             @Param("sku") String sku,
             @Param("excludeOrderSn") String excludeOrderSn,
+            @Param("optRealname") String optRealname,
+            @Param("purchaseDateBefore") LocalDateTime purchaseDateBefore,
             @Param("limit") int limit);
 
     /**
@@ -46,11 +50,26 @@ public interface ErpPurchaseOrderItemMapper extends BaseMapperX<ErpPurchaseOrder
     }
 
     /**
-     * 批量计算指定订单列表的降本金额。
-     * 逻辑：对每个订单的每个 SKU，取该 SKU 在本订单之外最近一次采购单价作为历史价，
-     * 降本金额 = SUM((历史单价 - 本次单价) × 本次采购数量)，无历史价的 SKU 不参与计算。
-     * 返回：Map key=orderSn, value=costReduction
+     * 批量计算多个订单的降本金额（一条 SQL，供同步时整页调用）。
+     * 返回 List<Map>，key=orderSn, value=costReduction
      */
-    List<Map<String, Object>> selectCostReductionByOrderSnList(@Param("orderSnList") Collection<String> orderSnList);
+    List<Map<String, Object>> batchCalcCostReduction(@Param("orderSnList") Collection<String> orderSnList);
+
+    /**
+     * 计算单个订单的降本金额。
+     * 逻辑：每个 SKU 取本订单之外最近一次采购单价作为历史价，
+     * 降本金额 = SUM((历史单价 - 本次单价) × 本次采购数量)，无历史价的 SKU 不参与计算。
+     */
+    BigDecimal calcCostReductionByOrderSn(@Param("orderSn") String orderSn);
+
+    /**
+     * 查询某 SKU 在排除指定订单号之外、同一采购员、且采购日期早于本次的最早一次采购单价（基准单价）。
+     * 无历史记录时返回 null。
+     */
+    BigDecimal selectFirstHistoryPriceBySku(
+            @Param("sku") String sku,
+            @Param("excludeOrderSn") String excludeOrderSn,
+            @Param("optRealname") String optRealname,
+            @Param("purchaseDateBefore") LocalDateTime purchaseDateBefore);
 
 }

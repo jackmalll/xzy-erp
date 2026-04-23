@@ -3,26 +3,31 @@
 <mapper namespace="cn.xzy.module.erp.dal.mysql.purchase.ErpPurchaseOrderItemMapper">
 
     <!--
-        批量计算指定订单列表的降本金额。
-        逻辑：对每个订单的每个 SKU，取该 SKU 在本订单之外最近一次采购单价作为历史价，
-        降本金额 = SUM((历史单价 - 本次单价) × 本次采购数量)，无历史价的 SKU 不参与计算。
+        批量计算多个订单的降本金额，返回 Map(orderSn -> costReduction)。
+        同步时一页订单全部落库后调用一次，避免逐单查询。
+        条件：历史采购员必须与本次相同，且历史采购日期必须早于本次采购日期。
     -->
-    <select id="selectCostReductionByOrderSnList" resultType="map">
+    <select id="batchCalcCostReduction" resultType="map">
         SELECT
             cur.order_sn AS orderSn,
-            COALESCE(SUM((hist_price.price - cur.price) * cur.quantity_real), 0) AS costReduction
+            COALESCE(SUM((hist.price - cur.price) * cur.quantity_real), 0) AS costReduction
         FROM erp_purchase_order_item cur
+        JOIN erp_purchase_order cur_o ON cur_o.order_sn = cur.order_sn
         LEFT JOIN (
             SELECT
                 i2.sku,
                 i2.order_sn AS exclude_order_sn,
                 i2.price,
+                o2.opt_realname,
+                o2.lx_create_time,
                 ROW_NUMBER() OVER (PARTITION BY i2.sku, i2.order_sn ORDER BY o2.lx_create_time DESC) AS rn
             FROM erp_purchase_order_item i2
             JOIN erp_purchase_order o2 ON o2.order_sn = i2.order_sn
-        ) hist_price ON hist_price.sku = cur.sku
-            AND hist_price.exclude_order_sn != cur.order_sn
-            AND hist_price.rn = 1
+        ) hist ON hist.sku = cur.sku
+            AND hist.exclude_order_sn != cur.order_sn
+            AND hist.opt_realname = cur_o.opt_realname
+            AND hist.lx_create_time &lt; cur_o.lx_create_time
+            AND hist.rn = 1
         WHERE cur.order_sn IN
         <foreach item="sn" collection="orderSnList" open="(" separator="," close=")">
             #{sn}
@@ -31,7 +36,34 @@
     </select>
 
     <!--
-        查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间正序，最早的为第1次）
+        计算单个订单的降本金额。
+        逻辑：每个 SKU 取本订单之外、同一采购员、且采购日期早于本次的最近一次单价作为历史价，
+        降本金额 = SUM((历史单价 - 本次单价) × 本次采购数量)，无历史价的 SKU 不参与计算。
+    -->
+    <select id="calcCostReductionByOrderSn" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM((hist.price - cur.price) * cur.quantity_real), 0)
+        FROM erp_purchase_order_item cur
+        JOIN erp_purchase_order cur_o ON cur_o.order_sn = cur.order_sn
+        LEFT JOIN (
+            SELECT
+                i2.sku,
+                i2.price,
+                o2.opt_realname,
+                o2.lx_create_time,
+                ROW_NUMBER() OVER (PARTITION BY i2.sku ORDER BY o2.lx_create_time DESC) AS rn
+            FROM erp_purchase_order_item i2
+            JOIN erp_purchase_order o2 ON o2.order_sn = i2.order_sn
+            WHERE i2.order_sn != #{orderSn}
+        ) hist ON hist.sku = cur.sku
+            AND hist.opt_realname = cur_o.opt_realname
+            AND hist.lx_create_time &lt; cur_o.lx_create_time
+            AND hist.rn = 1
+        WHERE cur.order_sn = #{orderSn}
+    </select>
+
+    <!--
+        查询某 SKU 在排除指定订单号之外的历史采购记录（按采购创建时间正序，最早的为第1次）。
+        条件：采购员必须与本次相同，且采购日期必须早于本次采购日期。
     -->
     <select id="selectHistoryPricesBySku"
             resultType="cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseOrderItemDetailVO$HistoryPrice">
@@ -40,8 +72,28 @@
         JOIN erp_purchase_order o ON o.order_sn = i.order_sn
         WHERE i.sku = #{sku}
           AND i.order_sn != #{excludeOrderSn}
+          AND o.opt_realname = #{optRealname}
+          AND o.lx_create_time &lt; #{purchaseDateBefore}
         ORDER BY o.lx_create_time ASC
         LIMIT #{limit}
+    </select>
+
+
+    <!--
+        查询某 SKU 在排除指定订单号之外的最早一次采购含税单价（基准单价）。
+        条件：采购员必须与本次相同，且采购日期必须早于本次采购日期。
+        无历史记录时返回 NULL。
+    -->
+    <select id="selectFirstHistoryPriceBySku" resultType="java.math.BigDecimal">
+        SELECT i.price
+        FROM erp_purchase_order_item i
+        JOIN erp_purchase_order o ON o.order_sn = i.order_sn
+        WHERE i.sku = #{sku}
+          AND i.order_sn != #{excludeOrderSn}
+          AND o.opt_realname = #{optRealname}
+          AND o.lx_create_time &lt; #{purchaseDateBefore}
+        ORDER BY o.lx_create_time ASC
+        LIMIT 1
     </select>
 
 </mapper>

@@ -32,6 +32,12 @@ public class ErpPurchaseOrderItemDetailVO {
     @Schema(description = "产品图片链接")
     private String picUrl;
 
+    @Schema(description = "基准单价（第一次历史采购含税单价），无历史则为 null")
+    private BigDecimal basePrice;
+
+    @Schema(description = "行降本金额 = (basePrice - price) × quantityReal，无基准价则为 null")
+    private BigDecimal itemCostReduction;
+
     @Schema(description = "历史采购价列表（最多3条，排除本订单，按时间倒序）")
     private List<HistoryPrice> historyPrices;
 

@@ -17,8 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -119,11 +121,19 @@ public class ErpPurchaseOrderSyncService {
                     .collect(Collectors.toList());
             Map<String, String> batchPicUrlMap = fetchPicUrlMap(batchSkuList);
 
+            // 1. 逐单 upsert（主单 + 子项），不在事务内计算降本
+            List<String> completedOrderSnList = new ArrayList<>();
             for (ErpPurchaseSyncOrderRespVO vo : orders) {
                 upsertOrder(vo, batchPicUrlMap);
                 if (vo.getStatus() != null && vo.getStatus() == 9) {
                     totalCompleted++;
+                    completedOrderSnList.add(vo.getOrderSn());
                 }
+            }
+
+            // 2. 整页落库后，批量计算降本金额并回写（一条SQL搞定整页）
+            if (!completedOrderSnList.isEmpty()) {
+                batchUpdateCostReduction(completedOrderSnList);
             }
 
             if (data.size() < PAGE_SIZE) {
@@ -169,6 +179,26 @@ public class ErpPurchaseOrderSyncService {
         if (vo.getItemList() != null && !vo.getItemList().isEmpty()) {
             for (ErpPurchaseSyncOrderItemRespVO itemVO : vo.getItemList()) {
                 upsertItem(vo.getOrderSn(), itemVO, picUrlMap.get(itemVO.getSku()));
+            }
+        }
+
+    }
+
+    /**
+     * 批量回写降本金额：一条窗口函数 SQL 算完整页，再逐行 UPDATE
+     */
+    private void batchUpdateCostReduction(List<String> orderSnList) {
+        List<Map<String, Object>> rows = purchaseOrderItemMapper.batchCalcCostReduction(orderSnList);
+        for (Map<String, Object> row : rows) {
+            String orderSn = (String) row.get("orderSn");
+            Object val = row.get("costReduction");
+            BigDecimal cr = val instanceof BigDecimal ? (BigDecimal) val : new BigDecimal(val.toString());
+            ErpPurchaseOrderDO existing = purchaseOrderMapper.selectByOrderSn(orderSn);
+            if (existing != null) {
+                ErpPurchaseOrderDO update = new ErpPurchaseOrderDO();
+                update.setId(existing.getId());
+                update.setCostReduction(cr);
+                purchaseOrderMapper.updateById(update);
             }
         }
     }

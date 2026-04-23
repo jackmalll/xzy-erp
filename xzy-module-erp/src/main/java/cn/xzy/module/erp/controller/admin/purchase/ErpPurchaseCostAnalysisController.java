@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -66,6 +67,13 @@ public class ErpPurchaseCostAnalysisController {
         List<ErpPurchaseCostAnalysisRespVO> list =
                 purchaseCostAnalysisService.getPurchaseCostAnalysisPage(exportReqVO).getList();
         ExcelUtils.write(response, "采购成本统计分析.xls", "数据", ErpPurchaseCostAnalysisRespVO.class, list);
+    }
+
+    @PostMapping("/recalc-cost-reduction")
+    @Operation(summary = "【临时】补算所有存量订单降本金额，执行一次后可删除此接口")
+    @PreAuthorize("@ss.hasPermission('erp:purchase-cost-analysis:query')")
+    public CommonResult<Integer> recalcAllCostReduction() {
+        return success(purchaseCostAnalysisService.recalcAllCostReduction());
     }
 
 }

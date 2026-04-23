@@ -28,4 +28,11 @@ public interface ErpPurchaseCostAnalysisService {
      */
     List<ErpPurchaseOrderItemDetailVO> getOrderItemDetails(String orderSn);
 
+    /**
+     * 补算所有存量订单的降本金额并回写（一次性操作，执行后可删除此接口）
+     *
+     * @return 处理条数
+     */
+    int recalcAllCostReduction();
+
 }

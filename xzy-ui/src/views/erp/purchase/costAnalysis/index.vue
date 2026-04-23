@@ -36,7 +36,7 @@
               class="!w-240px"
             />
           </el-form-item>
-          <el-form-item label="降本金额" label-width="80px" class="!mb-0">
+          <el-form-item label="降本金额" label-width="80px" class="!mb-0" prop="costReductionMin">
             <div class="flex items-center gap-4px">
               <el-input-number
                 v-model="queryParams.costReductionMin"
@@ -73,8 +73,9 @@
     </el-form>
   </ContentWrap>
 
+  <div class="px-16px pb-6px text-gray-400 text-12px">* 本页面单价为含税单价</div>
+
   <ContentWrap>
-    <div class="mb-10px text-right text-gray-500 text-13px">本页面单价为含税单价</div>
     <el-table v-loading="loading" :data="list">
       <el-table-column label="采购订单单号" align="center" prop="orderSn" min-width="140" />
       <el-table-column label="采购员" align="center" prop="optRealname" width="100" />
@@ -105,7 +106,19 @@
           <span>¥{{ formatMoney(row.amountTotal) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="降本金额" align="center" prop="costReduction" width="110">
+      <el-table-column align="center" prop="costReduction" width="130">
+        <template #header>
+          <span class="inline-flex items-center gap-4px">
+            降本金额
+            <el-tooltip
+              content="降本金额：根据设定的计算规则统计出的本次采购为公司节省的金额。"
+              placement="top"
+              :show-after="0"
+            >
+              <el-icon class="cursor-pointer text-gray-400 hover:text-blue-500"><InfoFilled /></el-icon>
+            </el-tooltip>
+          </span>
+        </template>
         <template #default="{ row }">
           <span :class="row.costReduction > 0 ? 'text-green-600' : row.costReduction < 0 ? 'text-red-500' : ''">
             ¥{{ formatMoney(row.costReduction) }}
@@ -137,13 +150,21 @@
   <!-- 统计明细弹窗 -->
   <el-dialog
     v-model="detailVisible"
-    title="采购订单包含商品统计明细"
-    width="1100px"
+    width="1200px"
     destroy-on-close
     :close-on-click-modal="false"
+    align-center
     @closed="handleDetailClosed"
+    class="cost-analysis-detail-dialog"
   >
-    <div class="mb-12px text-13px text-gray-500">本页面单价为含税单价</div>
+    <template #header>
+      <div style="text-align: center; font-weight: 700; font-size: 16px; color: #303133;">
+        采购订单包含商品统计明细
+      </div>
+    </template>
+    <div class="mb-12px text-13px text-gray-500">
+      <span class="font-medium text-gray-700">采购订单号：{{ currentRow?.orderSn }}</span>
+    </div>
 
     <el-table
       v-loading="detailLoading"
@@ -227,6 +248,44 @@
         <template #default="{ row }">
           <div class="font-medium">¥{{ formatPrice(row.price) }}</div>
           <div class="text-xs text-gray-400 mt-0.5">{{ formatDate(row.purchaseDate) }}</div>
+        </template>
+      </el-table-column>
+
+      <!-- 基准单价 -->
+      <el-table-column align="center" width="110">
+        <template #header>
+          <span class="inline-flex items-center gap-3px font-medium">
+            基准单价
+            <el-tooltip
+              placement="top"
+              :show-after="0"
+              effect="dark"
+              popper-class="cost-analysis-base-price-tooltip"
+            >
+              <template #content>
+                <div style="max-width: 320px; line-height: 1.6;">
+                  <div>基准单价：用本次采购单价，与之前我们认为"客观准确"的历史单价进行对比计算得出两者之间的"采购差额"。该差额即为本次采购"为公司省下的钱"（降本金额）。</div>
+                  <div style="margin-top: 6px;">这个"历史单价"就称为"基准单价"。可以是某次采购价，也可以是多次历史采购单价的平均值。合理设置"基准单价"，可以让激励政策更合理。</div>
+                </div>
+              </template>
+              <el-icon class="cursor-pointer text-gray-400 hover:text-blue-500"><InfoFilled /></el-icon>
+            </el-tooltip>
+          </span>
+        </template>
+        <template #default="{ row }">
+          <span v-if="row.basePrice != null" class="font-medium">¥{{ formatPrice(row.basePrice) }}</span>
+          <span v-else class="text-gray-400">/</span>
+        </template>
+      </el-table-column>
+
+      <!-- 降本金额 -->
+      <el-table-column label="降本金额" align="center" width="110">
+        <template #default="{ row }">
+          <span
+            v-if="row.itemCostReduction != null"
+            :class="row.itemCostReduction > 0 ? 'text-green-600 font-medium' : row.itemCostReduction < 0 ? 'text-red-500 font-medium' : 'text-gray-500'"
+          >¥{{ formatMoney(row.itemCostReduction) }}</span>
+          <span v-else class="text-gray-400">/</span>
         </template>
       </el-table-column>
 
@@ -337,6 +396,7 @@
 <script lang="ts" setup>
 import * as CostAnalysisApi from '@/api/erp/purchase/costAnalysis'
 import download from '@/utils/download'
+import { InfoFilled } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'ErpPurchaseCostAnalysis' })
 
@@ -495,6 +555,8 @@ const handleQuery = () => {
 /** 重置 */
 const resetQuery = () => {
   queryFormRef.value.resetFields()
+  queryParams.costReductionMin = undefined
+  queryParams.costReductionMax = undefined
   handleQuery()
 }
 
@@ -621,5 +683,9 @@ onMounted(() => {
 
 .purchase-image-actions {
   margin-top: 12px;
+}
+
+:deep(.cost-analysis-detail-dialog .el-dialog__headerbtn) {
+  top: 16px;
 }
 </style>

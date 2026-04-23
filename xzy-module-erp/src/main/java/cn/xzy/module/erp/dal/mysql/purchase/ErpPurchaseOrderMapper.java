@@ -28,6 +28,8 @@ public interface ErpPurchaseOrderMapper extends BaseMapperX<ErpPurchaseOrderDO> 
                 .likeIfPresent(ErpPurchaseOrderDO::getOrderSn, reqVO.getOrderSn())
                 .likeIfPresent(ErpPurchaseOrderDO::getOptRealname, reqVO.getOptRealname())
                 .betweenIfPresent(ErpPurchaseOrderDO::getLxCreateTime, reqVO.getLxCreateTime())
+                .geIfPresent(ErpPurchaseOrderDO::getCostReduction, reqVO.getCostReductionMin())
+                .leIfPresent(ErpPurchaseOrderDO::getCostReduction, reqVO.getCostReductionMax())
                 .orderByDesc(ErpPurchaseOrderDO::getLxCreateTime));
     }
 

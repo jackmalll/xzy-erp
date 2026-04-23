@@ -71,4 +71,9 @@ public class ErpPurchaseOrderDO extends BaseDO {
      */
     private LocalDateTime lxLastTime;
 
+    /**
+     * 降本金额（元），同步时计算写入
+     */
+    private BigDecimal costReduction;
+
 }

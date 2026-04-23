@@ -25,6 +25,8 @@ export interface OrderItemDetailVO {
   price: number
   purchaseDate: string
   picUrl: string
+  basePrice: number | null
+  itemCostReduction: number | null
   historyPrices: HistoryPriceVO[]
 }
 
