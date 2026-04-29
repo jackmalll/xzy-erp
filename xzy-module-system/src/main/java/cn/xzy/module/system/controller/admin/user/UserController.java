@@ -12,6 +12,7 @@ import cn.xzy.module.system.convert.user.UserConvert;
 import cn.xzy.module.system.dal.dataobject.dept.DeptDO;
 import cn.xzy.module.system.dal.dataobject.user.AdminUserDO;
 import cn.xzy.module.system.enums.common.SexEnum;
+import cn.xzy.framework.datapermission.core.annotation.DataPermission;
 import cn.xzy.module.system.service.dept.DeptService;
 import cn.xzy.module.system.service.user.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -99,6 +100,7 @@ public class UserController {
     @GetMapping("/page")
     @Operation(summary = "获得用户分页列表")
     @PreAuthorize("@ss.hasPermission('system:user:query')")
+    @DataPermission(enable = false)
     public CommonResult<PageResult<UserRespVO>> getUserPage(@Valid UserPageReqVO pageReqVO) {
         // 获得用户分页列表
         PageResult<AdminUserDO> pageResult = userService.getUserPage(pageReqVO);

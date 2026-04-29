@@ -286,3 +286,5 @@ xzy:
     endpoint: https://openapi.lingxing.com
     app-id: ak_Q1fdTAYK1XozF
     app-secret: KUGvgmFhEc6d76NZbiaCkA==
+    proxy-host: 43.99.60.244  # HTTP 代理 IP，不需要代理时删除或留空
+    proxy-port: 8089        # HTTP 代理端口

@@ -38,4 +38,14 @@ public class LingxingProperties {
      */
     private int syncDays = 30;
 
+    /**
+     * HTTP 代理服务器地址，为空则不使用代理
+     */
+    private String proxyHost;
+
+    /**
+     * HTTP 代理服务器端口，proxyHost 不为空时生效
+     */
+    private int proxyPort;
+
 }

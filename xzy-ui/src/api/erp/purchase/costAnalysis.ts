@@ -44,3 +44,24 @@ export const getOrderItemDetails = (orderSn: string) => {
 export const exportPurchaseCostAnalysis = (params: any) => {
   return request.download({ url: '/erp/purchase-cost-analysis/export-excel', params })
 }
+
+export interface CostReportItem {
+  optRealname: string
+  totalAmountGoods: number
+  amountGoodsRatio: number
+  totalCostReduction: number
+  costReductionRatio: number
+}
+
+export interface PurchaseCostReportVO {
+  items: CostReportItem[]
+  totalAmountGoodsAll: number
+  totalCostReductionAll: number
+  statBegin: string | null
+  statEnd: string | null
+}
+
+// 获得采购成本统计报表（按采购员汇总）
+export const getPurchaseCostReport = (params: { createTime?: string[] }) => {
+  return request.get<PurchaseCostReportVO>({ url: '/erp/purchase-cost-analysis/cost-report', params })
+}

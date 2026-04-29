@@ -3,6 +3,8 @@ package cn.xzy.module.erp.service.purchase;
 import cn.xzy.framework.common.pojo.PageResult;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostAnalysisPageReqVO;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostAnalysisRespVO;
+import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostReportReqVO;
+import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostReportRespVO;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseOrderItemDetailVO;
 
 import java.util.List;
@@ -27,6 +29,14 @@ public interface ErpPurchaseCostAnalysisService {
      * @return 商品明细列表
      */
     List<ErpPurchaseOrderItemDetailVO> getOrderItemDetails(String orderSn);
+
+    /**
+     * 获得采购成本统计报表（按采购员汇总）
+     *
+     * @param reqVO 查询条件（时间范围）
+     * @return 报表数据
+     */
+    ErpPurchaseCostReportRespVO getPurchaseCostReport(ErpPurchaseCostReportReqVO reqVO);
 
     /**
      * 补算所有存量订单的降本金额并回写（一次性操作，执行后可删除此接口）

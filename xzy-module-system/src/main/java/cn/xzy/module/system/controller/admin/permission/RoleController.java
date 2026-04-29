@@ -7,6 +7,7 @@ import cn.xzy.framework.common.pojo.PageParam;
 import cn.xzy.framework.common.pojo.PageResult;
 import cn.xzy.framework.common.util.object.BeanUtils;
 import cn.xzy.framework.excel.core.util.ExcelUtils;
+import cn.xzy.framework.datapermission.core.annotation.DataPermission;
 import cn.xzy.framework.security.core.util.SecurityFrameworkUtils;
 import cn.xzy.module.system.controller.admin.permission.vo.role.RolePageReqVO;
 import cn.xzy.module.system.controller.admin.permission.vo.role.RoleRespVO;
@@ -89,6 +90,7 @@ public class RoleController {
     @GetMapping("/page")
     @Operation(summary = "获得角色分页")
     @PreAuthorize("@ss.hasPermission('system:role:query')")
+    @DataPermission(enable = false)
     public CommonResult<PageResult<RoleRespVO>> getRolePage(RolePageReqVO pageReqVO) {
         Long operatorUserId = SecurityFrameworkUtils.getLoginUserId();
         Set<Long> operatorRoleIds = permissionService.getUserRoleIdListByUserId(operatorUserId);
@@ -101,6 +103,7 @@ public class RoleController {
 
     @GetMapping({"/list-all-simple", "/simple-list"})
     @Operation(summary = "获取角色精简信息列表", description = "只包含被开启的角色，主要用于前端的下拉选项")
+    @DataPermission(enable = false)
     public CommonResult<List<RoleRespVO>> getSimpleRoleList() {
         Long operatorUserId = SecurityFrameworkUtils.getLoginUserId();
         Set<Long> operatorRoleIds = permissionService.getUserRoleIdListByUserId(operatorUserId);

@@ -2,6 +2,7 @@ package cn.xzy.module.system.controller.admin.permission;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.xzy.framework.common.pojo.CommonResult;
+import cn.xzy.framework.datapermission.core.annotation.DataPermission;
 import cn.xzy.framework.security.core.util.SecurityFrameworkUtils;
 import cn.xzy.module.system.controller.admin.permission.vo.permission.PermissionAssignRoleDataScopeReqVO;
 import cn.xzy.module.system.controller.admin.permission.vo.permission.PermissionAssignRoleMenuReqVO;
@@ -85,6 +86,7 @@ public class PermissionController {
     @Parameter(name = "userId", description = "用户编号", required = true)
     @GetMapping("/list-user-roles")
     @PreAuthorize("@ss.hasPermission('system:permission:assign-user-role')")
+    @DataPermission(enable = false)
     public CommonResult<Set<Long>> listAdminRoles(@RequestParam("userId") Long userId) {
         Long operatorUserId = SecurityFrameworkUtils.getLoginUserId();
         Set<Long> operatorRoleIds = permissionService.getUserRoleIdListByUserId(operatorUserId);

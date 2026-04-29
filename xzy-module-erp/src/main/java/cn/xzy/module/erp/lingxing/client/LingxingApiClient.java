@@ -8,6 +8,7 @@ import cn.xzy.module.erp.lingxing.sign.LingxingApiSign;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -58,7 +59,7 @@ public class LingxingApiClient {
      */
     private String fetchNewAccessToken() {
         String url = properties.getEndpoint() + "/api/auth-server/oauth/access-token";
-        String body = HttpRequest.post(url)
+        String body = applyProxy(HttpRequest.post(url))
                 .form("appId", properties.getAppId())
                 .form("appSecret", properties.getAppSecret())
                 .timeout(30000)
@@ -72,7 +73,7 @@ public class LingxingApiClient {
      */
     private String refreshAccessToken(String refreshToken) {
         String url = properties.getEndpoint() + "/api/auth-server/oauth/refresh";
-        String body = HttpRequest.post(url)
+        String body = applyProxy(HttpRequest.post(url))
                 .form("appId", properties.getAppId())
                 .form("refreshToken", refreshToken)
                 .timeout(30000)
@@ -146,7 +147,7 @@ public class LingxingApiClient {
         queryParams.forEach((k, v) -> queryStr.append(k).append("=").append(v).append("&"));
         String url = properties.getEndpoint() + path + "?" + queryStr;
 
-        String responseBody = HttpRequest.post(url)
+        String responseBody = applyProxy(HttpRequest.post(url))
                 .contentType("application/json")
                 .body(JSONUtil.toJsonStr(bodyParams))
                 .timeout(30000)
@@ -154,6 +155,13 @@ public class LingxingApiClient {
                 .body();
 
         return responseBody;
+    }
+
+    private HttpRequest applyProxy(HttpRequest request) {
+        if (StringUtils.hasText(properties.getProxyHost()) && properties.getProxyPort() > 0) {
+            request.setHttpProxy(properties.getProxyHost(), properties.getProxyPort());
+        }
+        return request;
     }
 
 }

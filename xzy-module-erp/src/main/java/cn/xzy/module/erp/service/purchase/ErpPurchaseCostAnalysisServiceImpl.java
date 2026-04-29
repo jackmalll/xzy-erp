@@ -4,6 +4,8 @@ import cn.xzy.framework.common.pojo.PageResult;
 import cn.xzy.framework.common.util.object.BeanUtils;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostAnalysisPageReqVO;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostAnalysisRespVO;
+import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostReportReqVO;
+import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostReportRespVO;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseOrderItemDetailVO;
 import cn.xzy.module.erp.dal.dataobject.purchase.ErpPurchaseOrderDO;
 import cn.xzy.module.erp.dal.dataobject.purchase.ErpPurchaseOrderItemDO;
@@ -13,6 +15,8 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +66,50 @@ public class ErpPurchaseCostAnalysisServiceImpl implements ErpPurchaseCostAnalys
             vo.setCostReduction(order.getCostReduction());
             return vo;
         }).toList();
+    }
+
+    @Override
+    public ErpPurchaseCostReportRespVO getPurchaseCostReport(ErpPurchaseCostReportReqVO reqVO) {
+        LocalDateTime beginTime = null;
+        LocalDateTime endTime = null;
+        if (reqVO.getCreateTime() != null && reqVO.getCreateTime().length >= 2) {
+            beginTime = reqVO.getCreateTime()[0];
+            endTime = reqVO.getCreateTime()[1];
+        }
+        List<ErpPurchaseCostReportRespVO.Item> items =
+                purchaseOrderMapper.selectCostReportGroupByBuyer(beginTime, endTime);
+
+        BigDecimal totalGoods = items.stream()
+                .map(item -> item.getTotalAmountGoods() != null ? item.getTotalAmountGoods() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalReduction = items.stream()
+                .map(item -> item.getTotalCostReduction() != null ? item.getTotalCostReduction() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        for (ErpPurchaseCostReportRespVO.Item item : items) {
+            BigDecimal goods = item.getTotalAmountGoods() != null ? item.getTotalAmountGoods() : BigDecimal.ZERO;
+            BigDecimal reduction = item.getTotalCostReduction() != null ? item.getTotalCostReduction() : BigDecimal.ZERO;
+            if (totalGoods.compareTo(BigDecimal.ZERO) > 0) {
+                item.setAmountGoodsRatio(goods.multiply(BigDecimal.valueOf(100))
+                        .divide(totalGoods, 0, RoundingMode.HALF_UP));
+            } else {
+                item.setAmountGoodsRatio(BigDecimal.ZERO);
+            }
+            if (totalReduction.compareTo(BigDecimal.ZERO) > 0) {
+                item.setCostReductionRatio(reduction.multiply(BigDecimal.valueOf(100))
+                        .divide(totalReduction, 0, RoundingMode.HALF_UP));
+            } else {
+                item.setCostReductionRatio(BigDecimal.ZERO);
+            }
+        }
+
+        ErpPurchaseCostReportRespVO respVO = new ErpPurchaseCostReportRespVO();
+        respVO.setItems(items);
+        respVO.setTotalAmountGoodsAll(totalGoods);
+        respVO.setTotalCostReductionAll(totalReduction);
+        respVO.setStatBegin(beginTime);
+        respVO.setStatEnd(endTime);
+        return respVO;
     }
 
     @Override

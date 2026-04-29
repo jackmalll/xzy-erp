@@ -7,6 +7,8 @@ import cn.xzy.framework.common.pojo.PageResult;
 import cn.xzy.framework.excel.core.util.ExcelUtils;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostAnalysisPageReqVO;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostAnalysisRespVO;
+import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostReportReqVO;
+import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseCostReportRespVO;
 import cn.xzy.module.erp.controller.admin.purchase.vo.costanalysis.ErpPurchaseOrderItemDetailVO;
 import cn.xzy.module.erp.service.purchase.ErpPurchaseCostAnalysisService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,6 +69,13 @@ public class ErpPurchaseCostAnalysisController {
         List<ErpPurchaseCostAnalysisRespVO> list =
                 purchaseCostAnalysisService.getPurchaseCostAnalysisPage(exportReqVO).getList();
         ExcelUtils.write(response, "采购成本统计分析.xls", "数据", ErpPurchaseCostAnalysisRespVO.class, list);
+    }
+
+    @GetMapping("/cost-report")
+    @Operation(summary = "获得采购成本统计报表（按采购员汇总）")
+    @PreAuthorize("@ss.hasPermission('erp:purchase-cost-analysis:query')")
+    public CommonResult<ErpPurchaseCostReportRespVO> getPurchaseCostReport(ErpPurchaseCostReportReqVO reqVO) {
+        return success(purchaseCostAnalysisService.getPurchaseCostReport(reqVO));
     }
 
     @PostMapping("/recalc-cost-reduction")
