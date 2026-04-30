@@ -10,7 +10,9 @@
     <select id="batchCalcCostReduction" resultType="map">
         SELECT
             cur.order_sn AS orderSn,
-            COALESCE(SUM((hist.price - cur.price) * cur.quantity_real), 0) AS costReduction
+            COALESCE(SUM(
+                (hist.price - cur.price) * COALESCE(cur.quantity_entry, cur.quantity_real)
+            ), 0) AS costReduction
         FROM erp_purchase_order_item cur
         JOIN erp_purchase_order cur_o ON cur_o.order_sn = cur.order_sn
         LEFT JOIN (
@@ -32,6 +34,7 @@
         <foreach item="sn" collection="orderSnList" open="(" separator="," close=")">
             #{sn}
         </foreach>
+          AND (cur.item_status IS NULL OR cur.item_status != 2)
         GROUP BY cur.order_sn
     </select>
 
@@ -41,7 +44,9 @@
         降本金额 = SUM((历史单价 - 本次单价) × 本次采购数量)，无历史价的 SKU 不参与计算。
     -->
     <select id="calcCostReductionByOrderSn" resultType="java.math.BigDecimal">
-        SELECT COALESCE(SUM((hist.price - cur.price) * cur.quantity_real), 0)
+        SELECT COALESCE(SUM(
+            (hist.price - cur.price) * COALESCE(cur.quantity_entry, cur.quantity_real)
+        ), 0)
         FROM erp_purchase_order_item cur
         JOIN erp_purchase_order cur_o ON cur_o.order_sn = cur.order_sn
         LEFT JOIN (
@@ -59,6 +64,7 @@
             AND hist.lx_create_time &lt; cur_o.lx_create_time
             AND hist.rn = 1
         WHERE cur.order_sn = #{orderSn}
+          AND (cur.item_status IS NULL OR cur.item_status != 2)
     </select>
 
     <!--
@@ -94,6 +100,24 @@
           AND o.lx_create_time &lt; #{purchaseDateBefore}
         ORDER BY o.lx_create_time ASC
         LIMIT 1
+    </select>
+
+
+    <!--
+        查询某 SKU 同一采购员、采购日期早于本次的所有历史采购单价，按采购创建时间正序排列。
+        用于基准单价（N）规则计算：最小值规则 / 三段式均值规则。
+    -->
+    <select id="selectAllHistoryPricesBySku" resultType="java.math.BigDecimal">
+        SELECT i.price
+        FROM erp_purchase_order_item i
+        JOIN erp_purchase_order o ON o.order_sn = i.order_sn
+        WHERE i.sku = #{sku}
+          AND i.order_sn != #{excludeOrderSn}
+          AND o.opt_realname = #{optRealname}
+          AND o.lx_create_time &lt; #{purchaseDateBefore}
+          AND o.deleted = 0
+          AND i.deleted = 0
+        ORDER BY o.lx_create_time ASC
     </select>
 
 </mapper>

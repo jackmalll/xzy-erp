@@ -72,6 +72,16 @@ public class ErpPurchaseOrderDO extends BaseDO {
     private LocalDateTime lxLastTime;
 
     /**
+     * 实际采购量（整单）
+     */
+    private Integer quantityReal;
+
+    /**
+     * 入库量（整单）
+     */
+    private Integer quantityEntry;
+
+    /**
      * 降本金额（元），同步时计算写入
      */
     private BigDecimal costReduction;

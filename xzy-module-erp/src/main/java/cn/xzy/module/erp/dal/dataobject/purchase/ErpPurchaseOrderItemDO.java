@@ -63,8 +63,23 @@ public class ErpPurchaseOrderItemDO extends BaseDO {
     private Integer quantityReal;
 
     /**
+     * 到货入库量
+     */
+    private Integer quantityEntry;
+
+    /**
      * 产品图片链接（来自领星本地产品列表接口）
      */
     private String picUrl;
+
+    /**
+     * 基准单价（根据基准单价N配置规则计算，单位：元）
+     */
+    private BigDecimal basePrice;
+
+    /**
+     * 采购有效状态：0-待审核 1-有效 2-无效
+     */
+    private Integer itemStatus;
 
 }

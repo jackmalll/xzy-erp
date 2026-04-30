@@ -21,12 +21,14 @@ export interface OrderItemDetailVO {
   productName: string
   sku: string
   quantityReal: number
+  quantityEntry: number | null
   optRealname: string
   price: number
   purchaseDate: string
   picUrl: string
   basePrice: number | null
   itemCostReduction: number | null
+  itemStatus: number | null
   historyPrices: HistoryPriceVO[]
 }
 

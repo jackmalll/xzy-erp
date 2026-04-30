@@ -60,21 +60,45 @@
           </el-table-column>
           <el-table-column label="占比" align="center" width="80">
             <template #default="{ row }">
-              <span>{{ row.costReductionRatio }}%</span>
+              <span :class="getCostReductionClass(row.totalCostReduction)">{{ getCostReductionRatio(row) }}%</span>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
-      <!-- 右侧：两个饼图 -->
+      <!-- 右侧：三个饼图 -->
       <div class="flex gap-24px flex-wrap">
+        <!-- 总货物金额 -->
         <div class="flex flex-col items-center">
-          <div class="text-13px text-gray-500 mb-4px">总货物金额</div>
+          <div class="text-13px font-medium text-gray-700">总货物金额</div>
+          <div class="text-12px text-gray-400 mb-4px">¥{{ formatMoney(reportData.totalAmountGoodsAll) }}</div>
           <Echart :options="goodsPieOptions" height="260px" width="320px" />
         </div>
+        <!-- 降本（正） -->
         <div class="flex flex-col items-center">
-          <div class="text-13px text-gray-500 mb-4px">总降本金额</div>
-          <Echart :options="reductionPieOptions" height="260px" width="320px" />
+          <div class="text-13px font-medium text-gray-700">总降本金额（正）</div>
+          <div class="text-12px text-green-600 mb-4px">¥{{ formatMoney(totalPositiveCostReduction) }}</div>
+          <template v-if="positivePieHasData">
+            <Echart :options="positivePieOptions" height="260px" width="320px" />
+          </template>
+          <template v-else>
+            <div class="flex items-center justify-center" style="height:260px;width:320px">
+              <el-empty description="暂无正数降本" :image-size="60" />
+            </div>
+          </template>
+        </div>
+        <!-- 降本（负） -->
+        <div class="flex flex-col items-center">
+          <div class="text-13px font-medium text-gray-700">总降本金额（负）</div>
+          <div class="text-12px text-red-500 mb-4px">¥{{ formatMoney(totalNegativeCostReduction) }}</div>
+          <template v-if="negativePieHasData">
+            <Echart :options="negativePieOptions" height="260px" width="320px" />
+          </template>
+          <template v-else>
+            <div class="flex items-center justify-center" style="height:260px;width:320px">
+              <el-empty description="暂无负数降本" :image-size="60" />
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -97,6 +121,8 @@ const reportData = ref<CostAnalysisApi.PurchaseCostReportVO | null>(null)
 const currentRange = ref<string[]>([])
 
 const PIE_COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4']
+const POS_COLORS = ['#91cc75', '#3ba272', '#5470c6', '#73c0de', '#fac858', '#fc8452', '#9a60b4', '#ee6666']
+const NEG_COLORS = ['#ee6666', '#fc8452', '#fac858', '#9a60b4', '#73c0de', '#5470c6', '#91cc75', '#3ba272']
 
 const statPeriodText = computed(() => {
   if (!reportData.value) return ''
@@ -125,14 +151,25 @@ const goodsPieOptions = computed<EChartsOption>(() => {
   }
 })
 
-const reductionPieOptions = computed<EChartsOption>(() => {
+const positivePieHasData = computed(() =>
+  (reportData.value?.items ?? []).some((item) => Number(item.totalCostReduction ?? 0) > 0)
+)
+
+const negativePieHasData = computed(() =>
+  (reportData.value?.items ?? []).some((item) => Number(item.totalCostReduction ?? 0) < 0)
+)
+
+const positivePieOptions = computed<EChartsOption>(() => {
   const items = (reportData.value?.items ?? []).filter(
     (item) => Number(item.totalCostReduction ?? 0) > 0
   )
   return {
-    tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
+    tooltip: {
+      trigger: 'item',
+      formatter: (params: any) => `${params.name}: ¥${params.value} (${params.percent}%)`
+    },
     legend: { orient: 'vertical', right: 8, top: 'center', textStyle: { fontSize: 12 } },
-    color: PIE_COLORS,
+    color: POS_COLORS,
     series: [
       {
         type: 'pie',
@@ -147,6 +184,58 @@ const reductionPieOptions = computed<EChartsOption>(() => {
     ]
   }
 })
+
+const negativePieOptions = computed<EChartsOption>(() => {
+  const items = (reportData.value?.items ?? []).filter(
+    (item) => Number(item.totalCostReduction ?? 0) < 0
+  )
+  return {
+    tooltip: {
+      trigger: 'item',
+      formatter: (params: any) =>
+        `${params.name}: ¥${(-Math.abs(params.value)).toFixed(2)} (${params.percent}%)`
+    },
+    legend: { orient: 'vertical', right: 8, top: 'center', textStyle: { fontSize: 12 } },
+    color: NEG_COLORS,
+    series: [
+      {
+        type: 'pie',
+        radius: ['35%', '65%'],
+        center: ['34%', '50%'],
+        label: { show: false },
+        data: items.map((item) => ({
+          name: item.optRealname || '未知',
+          value: Math.abs(Number(item.totalCostReduction ?? 0))
+        }))
+      }
+    ]
+  }
+})
+
+const totalPositiveCostReduction = computed(() =>
+  (reportData.value?.items ?? [])
+    .filter((item) => Number(item.totalCostReduction ?? 0) > 0)
+    .reduce((sum, item) => sum + Number(item.totalCostReduction ?? 0), 0)
+)
+
+const totalNegativeCostReduction = computed(() =>
+  (reportData.value?.items ?? [])
+    .filter((item) => Number(item.totalCostReduction ?? 0) < 0)
+    .reduce((sum, item) => sum + Number(item.totalCostReduction ?? 0), 0)
+)
+
+const getCostReductionRatio = (row: any): string => {
+  const val = Number(row.totalCostReduction ?? 0)
+  if (val > 0) {
+    const total = totalPositiveCostReduction.value
+    return total === 0 ? '0' : ((val / total) * 100).toFixed(0)
+  }
+  if (val < 0) {
+    const total = totalNegativeCostReduction.value
+    return total === 0 ? '0' : ((val / total) * 100).toFixed(0)
+  }
+  return '0'
+}
 
 const getDateRange = (): string[] => {
   const now = new Date()

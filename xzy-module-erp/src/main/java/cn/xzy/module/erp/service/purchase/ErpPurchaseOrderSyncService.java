@@ -10,6 +10,7 @@ import cn.xzy.module.erp.dal.dataobject.purchase.ErpPurchaseOrderDO;
 import cn.xzy.module.erp.dal.dataobject.purchase.ErpPurchaseOrderItemDO;
 import cn.xzy.module.erp.dal.mysql.purchase.ErpPurchaseOrderItemMapper;
 import cn.xzy.module.erp.dal.mysql.purchase.ErpPurchaseOrderMapper;
+import cn.xzy.module.erp.controller.admin.purchase.vo.basepriceconfig.ErpBasePriceConfigVO;
 import cn.xzy.module.erp.lingxing.client.LingxingApiClient;
 import cn.xzy.module.erp.lingxing.config.LingxingProperties;
 import jakarta.annotation.Resource;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -48,6 +50,8 @@ public class ErpPurchaseOrderSyncService {
     private ErpPurchaseOrderMapper purchaseOrderMapper;
     @Resource
     private ErpPurchaseOrderItemMapper purchaseOrderItemMapper;
+    @Resource
+    private ErpBasePriceConfigService basePriceConfigService;
 
     /**
      * 增量同步采购订单
@@ -112,7 +116,8 @@ public class ErpPurchaseOrderSyncService {
 
             // 批次级别：收集本页所有订单的全部 SKU，去重后一次性拉取图片
             List<String> batchSkuList = orders.stream()
-                    .filter(o -> o.getStatus() != null && o.getStatus() == 9)
+                    .filter(o -> o.getStatus() != null && o.getStatus() == 9
+                            && (o.getStatusShipped() == null || o.getStatusShipped() != 1))
                     .filter(o -> o.getItemList() != null)
                     .flatMap(o -> o.getItemList().stream())
                     .map(ErpPurchaseSyncOrderItemRespVO::getSku)
@@ -125,7 +130,8 @@ public class ErpPurchaseOrderSyncService {
             List<String> completedOrderSnList = new ArrayList<>();
             for (ErpPurchaseSyncOrderRespVO vo : orders) {
                 upsertOrder(vo, batchPicUrlMap);
-                if (vo.getStatus() != null && vo.getStatus() == 9) {
+                if (vo.getStatus() != null && vo.getStatus() == 9
+                        && (vo.getStatusShipped() == null || vo.getStatusShipped() != 1)) {
                     totalCompleted++;
                     completedOrderSnList.add(vo.getOrderSn());
                 }
@@ -163,7 +169,8 @@ public class ErpPurchaseOrderSyncService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void upsertOrder(ErpPurchaseSyncOrderRespVO vo, Map<String, String> picUrlMap) {
-        if (vo.getStatus() == null || vo.getStatus() != 9) {
+        if (vo.getStatus() == null || vo.getStatus() != 9
+                || Integer.valueOf(1).equals(vo.getStatusShipped())) {
             return;
         }
         ErpPurchaseOrderDO existing = purchaseOrderMapper.selectByOrderSn(vo.getOrderSn());
@@ -177,8 +184,11 @@ public class ErpPurchaseOrderSyncService {
         }
 
         if (vo.getItemList() != null && !vo.getItemList().isEmpty()) {
+            ErpBasePriceConfigVO config = basePriceConfigService.getConfig();
+            LocalDateTime orderCreateTime = parseDateTime(vo.getCreateTime());
+            String optRealname = vo.getOptRealname();
             for (ErpPurchaseSyncOrderItemRespVO itemVO : vo.getItemList()) {
-                upsertItem(vo.getOrderSn(), itemVO, picUrlMap.get(itemVO.getSku()));
+                upsertItem(vo.getOrderSn(), itemVO, picUrlMap.get(itemVO.getSku()), config, optRealname, orderCreateTime);
             }
         }
 
@@ -203,9 +213,10 @@ public class ErpPurchaseOrderSyncService {
         }
     }
 
-    private void upsertItem(String orderSn, ErpPurchaseSyncOrderItemRespVO itemVO, String picUrl) {
+    private void upsertItem(String orderSn, ErpPurchaseSyncOrderItemRespVO itemVO, String picUrl,
+                             ErpBasePriceConfigVO config, String optRealname, LocalDateTime orderCreateTime) {
         ErpPurchaseOrderItemDO existing = purchaseOrderItemMapper.selectByLxItemId(itemVO.getId());
-        ErpPurchaseOrderItemDO itemDO = buildItemDO(orderSn, itemVO, picUrl);
+        ErpPurchaseOrderItemDO itemDO = buildItemDO(orderSn, itemVO, picUrl, config, optRealname, orderCreateTime);
         if (existing == null) {
             purchaseOrderItemMapper.insert(itemDO);
         } else {
@@ -215,14 +226,32 @@ public class ErpPurchaseOrderSyncService {
     }
 
     private ErpPurchaseOrderDO buildOrderDO(ErpPurchaseSyncOrderRespVO vo) {
+        // 完善点1：若入库量 != 实际采购量，则实际总价 = 各 item 的 quantity_entry * price 之和
+        BigDecimal actualAmountTotal = vo.getAmountTotal();
+        Integer qtyReal = vo.getQuantityReal();
+        Integer qtyEntry = vo.getQuantityEntry();
+        boolean partialEntry = qtyReal != null && qtyEntry != null && !qtyReal.equals(qtyEntry);
+        if (partialEntry && vo.getItemList() != null && !vo.getItemList().isEmpty()) {
+            BigDecimal sumEntry = BigDecimal.ZERO;
+            for (ErpPurchaseSyncOrderItemRespVO item : vo.getItemList()) {
+                if (item.getQuantityEntry() != null && item.getPrice() != null) {
+                    sumEntry = sumEntry.add(
+                            item.getPrice().multiply(BigDecimal.valueOf(item.getQuantityEntry())));
+                }
+            }
+            actualAmountTotal = sumEntry;
+        }
+
         ErpPurchaseOrderDO orderDO = ErpPurchaseOrderDO.builder()
                 .orderSn(vo.getOrderSn())
                 .optRealname(vo.getOptRealname())
                 .status(vo.getStatus())
                 .statusShipped(vo.getStatusShipped())
                 .isTax(vo.getIsTax())
-                .amountTotal(vo.getAmountTotal())
+                .amountTotal(actualAmountTotal)
                 .shippingPrice(vo.getShippingPrice())
+                .quantityReal(qtyReal)
+                .quantityEntry(qtyEntry)
                 .lxCreateTime(parseDateTime(vo.getCreateTime()))
                 .lxLastTime(parseDateTime(vo.getLastTime()))
                 .build();
@@ -230,7 +259,15 @@ public class ErpPurchaseOrderSyncService {
         return orderDO;
     }
 
-    private ErpPurchaseOrderItemDO buildItemDO(String orderSn, ErpPurchaseSyncOrderItemRespVO itemVO, String picUrl) {
+    private ErpPurchaseOrderItemDO buildItemDO(String orderSn, ErpPurchaseSyncOrderItemRespVO itemVO, String picUrl,
+                                               ErpBasePriceConfigVO config, String optRealname,
+                                               LocalDateTime orderCreateTime) {
+        // 完善点2：根据基准单价（N）配置规则计算 basePrice
+        BigDecimal basePrice = calcBasePrice(itemVO.getSku(), orderSn, optRealname, orderCreateTime, config);
+
+        // 完善点2：根据风控配置判断 itemStatus（1-有效 2-无效 0-待审核）
+        Integer itemStatus = calcItemStatus(itemVO, basePrice, config);
+
         return ErpPurchaseOrderItemDO.builder()
                 .orderSn(orderSn)
                 .lxItemId(itemVO.getId())
@@ -239,8 +276,126 @@ public class ErpPurchaseOrderSyncService {
                 .price(itemVO.getPrice())
                 .amount(itemVO.getAmount())
                 .quantityReal(itemVO.getQuantityReal())
+                .quantityEntry(itemVO.getQuantityEntry())
                 .picUrl(picUrl)
+                .basePrice(basePrice)
+                .itemStatus(itemStatus)
                 .build();
+    }
+
+    /**
+     * 根据基准单价（N）配置规则计算该 SKU 的基准单价。
+     * 优先级：最小值规则 > 三段式规则。若未启用任何规则或无历史记录，则返回 null。
+     */
+    private BigDecimal calcBasePrice(String sku, String orderSn, String optRealname,
+                                     LocalDateTime orderCreateTime, ErpBasePriceConfigVO config) {
+        if (sku == null || optRealname == null || orderCreateTime == null) {
+            return null;
+        }
+        List<BigDecimal> histPrices = purchaseOrderItemMapper
+                .selectAllHistoryPricesBySku(sku, orderSn, optRealname, orderCreateTime);
+        if (histPrices == null || histPrices.isEmpty()) {
+            return null;
+        }
+
+        if (Boolean.TRUE.equals(config.getRuleMinPrice())) {
+            return histPrices.stream().filter(p -> p != null)
+                    .min(BigDecimal::compareTo).orElse(null);
+        }
+
+        if (Boolean.TRUE.equals(config.getRuleThreeEnabled())) {
+            return calcThreeStageBasePrice(histPrices, config);
+        }
+
+        return null;
+    }
+
+    /**
+     * 三段式规则计算基准单价：根据历史采购次数选中规则区间，对区间内价格取均值或最小值。
+     */
+    private BigDecimal calcThreeStageBasePrice(List<BigDecimal> prices, ErpBasePriceConfigVO config) {
+        int n = prices.size();
+        int fromIdx;
+        int toIdx;
+
+        Integer r1Max = config.getRule1MaxCount() != null ? config.getRule1MaxCount() : 3;
+        Integer r2Max = config.getRule2MaxCount() != null ? config.getRule2MaxCount() : 10;
+
+        if (n <= r1Max) {
+            fromIdx = (config.getRule1AvgFrom() != null ? config.getRule1AvgFrom() : 1) - 1;
+            toIdx   = Math.min(config.getRule1AvgTo() != null ? config.getRule1AvgTo() : 3, n) - 1;
+        } else if (n <= r2Max) {
+            fromIdx = (config.getRule2AvgFrom() != null ? config.getRule2AvgFrom() : 5) - 1;
+            toIdx   = Math.min(config.getRule2AvgTo() != null ? config.getRule2AvgTo() : 8, n) - 1;
+        } else {
+            fromIdx = (config.getRule3AvgFrom() != null ? config.getRule3AvgFrom() : 5) - 1;
+            Integer r3To = config.getRule3AvgTo();
+            toIdx = (r3To == null || r3To == -1) ? n - 1 : Math.min(r3To, n) - 1;
+        }
+
+        if (fromIdx < 0) fromIdx = 0;
+        if (toIdx < fromIdx || toIdx >= n) toIdx = n - 1;
+
+        List<BigDecimal> slice = prices.subList(fromIdx, toIdx + 1).stream()
+                .filter(p -> p != null).collect(Collectors.toList());
+        if (slice.isEmpty()) return null;
+
+        boolean useMin = "min".equalsIgnoreCase(config.getRuleThreeCalcType());
+        if (useMin) {
+            return slice.stream().min(BigDecimal::compareTo).orElse(null);
+        }
+        BigDecimal sum = slice.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return sum.divide(BigDecimal.valueOf(slice.size()), 4, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 完善点2：根据风控配置判断 item 的采购有效状态。
+     * <ul>
+     *   <li>1 - 有效（默认，未命中任何风控规则）</li>
+     *   <li>2 - 无效/忽略（命中数量或金额风控中任意一条且均已启用）</li>
+     *   <li>0 - 待审核（命中单价浮动风控）</li>
+     * </ul>
+     * 只有同时勾选（启用）的风控规则才参与判断。
+     * 同一 item 命中无效规则优先于待审核。
+     */
+    private Integer calcItemStatus(ErpPurchaseSyncOrderItemRespVO itemVO, BigDecimal basePrice,
+                                   ErpBasePriceConfigVO config) {
+        boolean invalid = false;
+        boolean pending = false;
+
+        // 规则1：采购SKU数量 < 阈值 → 无效
+        if (Boolean.TRUE.equals(config.getRiskQtyEnabled())
+                && config.getRiskQtyThreshold() != null
+                && itemVO.getQuantityReal() != null
+                && itemVO.getQuantityReal() < config.getRiskQtyThreshold()) {
+            invalid = true;
+        }
+
+        // 规则2：采购SKU总金额 < 阈值 → 无效（使用 amount 字段，即价税合计）
+        if (Boolean.TRUE.equals(config.getRiskAmountEnabled())
+                && config.getRiskAmountThreshold() != null
+                && itemVO.getAmount() != null
+                && itemVO.getAmount().compareTo(config.getRiskAmountThreshold()) < 0) {
+            invalid = true;
+        }
+
+        // 规则3：本次单价浮动超过阈值 → 待审核（需有基准单价）
+        if (!invalid && Boolean.TRUE.equals(config.getRiskPriceFloatEnabled())
+                && config.getRiskPriceFloatPercent() != null
+                && basePrice != null && basePrice.compareTo(BigDecimal.ZERO) > 0
+                && itemVO.getPrice() != null) {
+            BigDecimal floatPct = itemVO.getPrice().subtract(basePrice)
+                    .abs()
+                    .divide(basePrice, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+            if (floatPct.compareTo(config.getRiskPriceFloatPercent()) > 0) {
+                pending = true;
+            }
+        }
+
+        if (invalid) return 2;
+        if (pending) return 0;
+        return 1;
     }
 
     /**

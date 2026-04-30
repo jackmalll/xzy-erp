@@ -67,6 +67,18 @@ public class ErpPurchaseSyncOrderRespVO {
     private BigDecimal shippingPrice;
 
     /**
+     * 实际采购量
+     */
+    @JsonProperty("quantity_real")
+    private Integer quantityReal;
+
+    /**
+     * 入库量
+     */
+    @JsonProperty("quantity_entry")
+    private Integer quantityEntry;
+
+    /**
      * 采购子项列表
      */
     @JsonProperty("item_list")

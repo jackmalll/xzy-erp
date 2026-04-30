@@ -47,4 +47,10 @@ public class ErpPurchaseSyncOrderItemRespVO {
     @JsonProperty("quantity_real")
     private Integer quantityReal;
 
+    /**
+     * 到货入库量
+     */
+    @JsonProperty("quantity_entry")
+    private Integer quantityEntry;
+
 }

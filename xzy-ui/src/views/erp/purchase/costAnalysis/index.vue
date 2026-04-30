@@ -172,6 +172,7 @@
       border
       stripe
       style="width: 100%"
+      :row-class-name="getDetailRowClass"
     >
       <!-- 图片 -->
       <el-table-column label="图片" width="80" align="center">
@@ -232,11 +233,20 @@
       <!-- 品名/SKU/数量/采购员 -->
       <el-table-column label="品名" prop="productName" min-width="220">
         <template #default="{ row }">
-          <div class="text-sm leading-snug">{{ row.productName || '-' }}</div>
+          <div class="text-sm leading-snug flex items-center gap-4px flex-wrap">
+            <el-tag v-if="row.itemStatus === 2" type="danger" size="small" effect="plain">无效</el-tag>
+            {{ row.productName || '-' }}
+          </div>
         </template>
       </el-table-column>
       <el-table-column label="SKU" prop="sku" width="120" align="center" />
       <el-table-column label="采购数量" prop="quantityReal" width="90" align="center" />
+      <el-table-column label="入库数量" width="90" align="center">
+        <template #default="{ row }">
+          <span v-if="row.quantityEntry != null">{{ row.quantityEntry }}</span>
+          <span v-else class="text-gray-400">-</span>
+        </template>
+      </el-table-column>
       <el-table-column label="采购员" prop="optRealname" width="90" align="center" />
 
       <!-- 本次采购价 -->
@@ -279,7 +289,15 @@
       </el-table-column>
 
       <!-- 降本金额 -->
-      <el-table-column label="降本金额" align="center" width="110">
+      <el-table-column align="center" width="110">
+        <template #header>
+          <span class="inline-flex items-center gap-3px font-medium">
+            降本金额
+            <el-tooltip content="降本金额按实际入库数量计算，入库数量为空时降级使用采购数量。" placement="top" :show-after="0">
+              <el-icon class="cursor-pointer text-gray-400 hover:text-blue-500"><InfoFilled /></el-icon>
+            </el-tooltip>
+          </span>
+        </template>
         <template #default="{ row }">
           <span
             v-if="row.itemCostReduction != null"
@@ -616,6 +634,10 @@ const handleDetailClosed = () => {
   resetImagePreviewState()
 }
 
+const getDetailRowClass = ({ row }: { row: CostAnalysisApi.OrderItemDetailVO }) => {
+  return row.itemStatus === 2 ? 'is-invalid-item' : ''
+}
+
 onMounted(() => {
   getList()
 })
@@ -687,5 +709,10 @@ onMounted(() => {
 
 :deep(.cost-analysis-detail-dialog .el-dialog__headerbtn) {
   top: 16px;
+}
+
+:deep(.is-invalid-item) {
+  opacity: 0.5;
+  color: #9ca3af;
 }
 </style>

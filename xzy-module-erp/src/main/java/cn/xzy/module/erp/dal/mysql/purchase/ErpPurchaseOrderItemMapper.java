@@ -72,4 +72,14 @@ public interface ErpPurchaseOrderItemMapper extends BaseMapperX<ErpPurchaseOrder
             @Param("optRealname") String optRealname,
             @Param("purchaseDateBefore") LocalDateTime purchaseDateBefore);
 
+    /**
+     * 查询某 SKU 同一采购员、采购日期早于本次的所有历史采购单价（按采购创建时间正序）。
+     * 用于按基准单价（N）规则（最小值 / 三段式均值）计算基准价。
+     */
+    List<BigDecimal> selectAllHistoryPricesBySku(
+            @Param("sku") String sku,
+            @Param("excludeOrderSn") String excludeOrderSn,
+            @Param("optRealname") String optRealname,
+            @Param("purchaseDateBefore") LocalDateTime purchaseDateBefore);
+
 }

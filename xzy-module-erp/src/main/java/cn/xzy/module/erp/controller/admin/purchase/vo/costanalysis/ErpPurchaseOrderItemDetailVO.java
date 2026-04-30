@@ -20,6 +20,9 @@ public class ErpPurchaseOrderItemDetailVO {
     @Schema(description = "采购数量")
     private Integer quantityReal;
 
+    @Schema(description = "入库数量")
+    private Integer quantityEntry;
+
     @Schema(description = "采购员")
     private String optRealname;
 
@@ -35,8 +38,11 @@ public class ErpPurchaseOrderItemDetailVO {
     @Schema(description = "基准单价（第一次历史采购含税单价），无历史则为 null")
     private BigDecimal basePrice;
 
-    @Schema(description = "行降本金额 = (basePrice - price) × quantityReal，无基准价则为 null")
+    @Schema(description = "行降本金额 = (basePrice - price) × quantityEntry，无基准价则为 null")
     private BigDecimal itemCostReduction;
+
+    @Schema(description = "采购有效状态：0-待审核 1-有效 2-无效")
+    private Integer itemStatus;
 
     @Schema(description = "历史采购价列表（最多3条，排除本订单，按时间倒序）")
     private List<HistoryPrice> historyPrices;

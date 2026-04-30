@@ -135,10 +135,12 @@ public class ErpPurchaseCostAnalysisServiceImpl implements ErpPurchaseCostAnalys
             vo.setProductName(item.getProductName());
             vo.setSku(item.getSku());
             vo.setQuantityReal(item.getQuantityReal());
+            vo.setQuantityEntry(item.getQuantityEntry());
             vo.setOptRealname(order != null ? order.getOptRealname() : null);
             vo.setPrice(item.getPrice());
             vo.setPurchaseDate(order != null ? order.getLxCreateTime() : null);
             vo.setPicUrl(item.getPicUrl());
+            vo.setItemStatus(item.getItemStatus());
 
             String optRealname = order != null ? order.getOptRealname() : null;
             java.time.LocalDateTime purchaseDate = order != null ? order.getLxCreateTime() : null;
@@ -149,9 +151,13 @@ public class ErpPurchaseCostAnalysisServiceImpl implements ErpPurchaseCostAnalys
 
             BigDecimal basePrice = purchaseOrderItemMapper.selectFirstHistoryPriceBySku(item.getSku(), orderSn, optRealname, purchaseDate);
             vo.setBasePrice(basePrice);
-            if (basePrice != null && item.getPrice() != null && item.getQuantityReal() != null) {
+            // 降本金额按入库数量计算：有入库数量取入库数量，否则降级使用采购数量
+            // itemStatus=2（无效/忽略）时不参与降本计算
+            Integer calcQty = item.getQuantityEntry() != null ? item.getQuantityEntry() : item.getQuantityReal();
+            if (basePrice != null && item.getPrice() != null && calcQty != null
+                    && !Integer.valueOf(2).equals(item.getItemStatus())) {
                 vo.setItemCostReduction(basePrice.subtract(item.getPrice())
-                        .multiply(BigDecimal.valueOf(item.getQuantityReal())));
+                        .multiply(BigDecimal.valueOf(calcQty)));
             }
             return vo;
         }).toList();
